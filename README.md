@@ -10,3 +10,7 @@
 
 刚刚搞完 exploit education 的 stack 部分，现在直接顺着写 ROP
 
+所有的用到的程式：https://ropemporium.com/binary/rop_emporium_all_challenges.zip
+
+
+
