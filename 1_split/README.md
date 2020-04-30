@@ -67,7 +67,7 @@ Once you've planned your chain, craft a suitable solution. We're still trying to
 
 它只是调用了 `system("/bin/ls")`
 
-把返回地址覆盖成它的 `plt` 也没有用啊
+把返回地址覆盖成它的地址也没有用啊
 
 这里就涉及到 ROP 了
 
@@ -77,7 +77,7 @@ Once you've planned your chain, craft a suitable solution. We're still trying to
 
 调用一个函数前要把参数放入指定的寄存器
 
-`x64` ：前六个参数要依次放入 `rdi` `rsi` `rcx` `rdx` `r8` `r9`
+`x64` ：前六个参数要依次放入 `rdi` `rsi` `rdx` `rcx` `r8` `r9`
 
 可以看看 `fget` 的调用过程
 
